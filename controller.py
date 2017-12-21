@@ -142,7 +142,7 @@ def hvac_control():
 			f.close()
 			for z in normal_zones:
 				print p
-				#zones[z].write(p)
+				zones[z].write(p)
 		elif action == "1":
 			p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": math.floor(temp-0.1)}
 			f = open(filename, 'a')
@@ -150,7 +150,7 @@ def hvac_control():
 			f.close()
 			for z in normal_zones:
 				print p
-				#zones[z].write(p)
+				zones[z].write(p)
 		elif action == "2":
 			p = {"override": True, "heating_setpoint": math.ceil(temp+0.1), "cooling_setpoint": cooling_setpoint}
 			f = open(filename, 'a')
@@ -158,10 +158,9 @@ def hvac_control():
 			f.close()
 			for z in normal_zones:
 				print p
-				#zones[z].write(p)
+				zones[z].write(p)
 		else:
-			print("PROBLEM")
-			#normal_schedule()
+			normal_schedule()
 	except:
 		normal_schedule()
 
