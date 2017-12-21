@@ -222,7 +222,7 @@ class Advise:
 
 		uid, df = dfs.items()[0]
 		df['tin']=df['tin'].replace(to_replace=0, method='pad')
-		print df
+		
 		return df['tin']
 
 	def advise(self):
