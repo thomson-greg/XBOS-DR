@@ -1,3 +1,2 @@
 # XBOS-DR
-* Putting everything together
-* CIEE
+* Putting everything together at CIEE
