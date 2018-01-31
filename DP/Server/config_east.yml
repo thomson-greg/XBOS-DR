@@ -1,0 +1,23 @@
+
+UUIDS:
+    thermostat_high: 'd38446d4-32cc-34bd-b293-0a3871a6759b'
+    thermostat_low: 'e4d39723-5907-35bd-a9b2-fc57b58b3779'
+    thermostat_mode: '3bc7ce21-2384-3ebe-aedd-8c2822b5a10c'
+    thermostat_temperature: 'b47ba370-bceb-39cf-9552-d1225d910039'
+    thermostat_state: '7e543d07-16d1-32bb-94af-95a01f4675f9'
+    energy_cost: '9dc5b5cd-8cb1-3dd3-b582-5ed6bf3f0083'
+
+zone: "EastZone"
+
+energy_rates: "winter_rates" # options are "server", "summer_rates", "winter_rates", "event_day_rates"
+
+thermostat_changes_file: "thermostat_changes.txt"
+
+advise:
+    lambda: 0.995
+    interval_Length: 15  # in minutes
+    hours: 4
+    maximum_Safety_Temp: 86
+    minimum_Safety_Temp: 54
+    heating_Consumption: 4000  # watts
+    cooling_Consumption: 4000  # watts
