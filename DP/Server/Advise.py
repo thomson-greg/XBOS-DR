@@ -146,32 +146,33 @@ class EVA:
 
 # the Advise class initializes all the 
 class Advise:
-	def __init__(self):
+	def __init__(self, cfg):
 
 		# initialize constants
-		Lambda = 0.995
-		Interval_Length = 15  # in minutes
-		Hours = 4
+		Lambda = cfg['advise']['lambda']
+		Interval_Length = cfg['advise']['interval_Length']  # in minutes
+		Hours = cfg['advise']['hours']
 		Intervals = Hours * 60 / Interval_Length
-		Predicted_Interval_Demands = [0]*Intervals
-		Predicted_Interval_Usage = [0]*Intervals
-		No_Of_Zones = 1
-		Maximum_Safety_Temp, Minimum_Safety_Temp = 86, 54
-		Heating_Consumption = 4000  # watts
-		Cooling_Consumption = 4000  # watts
+		Predicted_Interval_Demands = [0]*Intervals #ignore this
+		Predicted_Interval_Usage = [0]*Intervals #ignore this
+		No_Of_Zones = 1 #ignore this
+		Maximum_Safety_Temp, Minimum_Safety_Temp = cfg['advise']['maximum_Safety_Temp'], cfg['advise']['minimum_Safety_Temp']
+		Heating_Consumption = cfg['advise']['heating_Consumption']  # watts
+		Cooling_Consumption = cfg['advise']['cooling_Consumption']  # watts
 		
-		max_demand = 0
-		self.current_time = datetime.datetime.now(pytz.timezone("America/Los_Angeles"))+timedelta(hours=8)
+		max_demand = 0 #ignore this
+
+		self.current_time = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))
 		
 		# collect data for the thermal model
-		self.df = self.inside_temperature()
+		self.df = self.inside_temperature(cfg)
 		
 		# initialize all models
 		disc = Discomfort(now=self.current_time)
-		th = ThermalModel(now=self.current_time)
-		occ = Occupancy(now=self.current_time)
+		th = ThermalModel(cfg, now=self.current_time)
+		occ = Occupancy(cfg, now=self.current_time)
 		safety = Safety(max_temperature=Maximum_Safety_Temp, min_temperature=Minimum_Safety_Temp, noZones=No_Of_Zones)
-		energy = EnergyConsumption(now=self.current_time, heat=Heating_Consumption, cool=Cooling_Consumption)
+		energy = EnergyConsumption(cfg, now=self.current_time, heat=Heating_Consumption, cool=Cooling_Consumption)
 		
 		Zones_Starting_Temps = [self.df[-1]]
 		self.root = Node(Zones_Starting_Temps, 0)
@@ -194,21 +195,14 @@ class Advise:
 			energy=energy
 		)	
 
-	def inside_temperature(self):
+	# function that returns the inside temperature of the zone
+	def inside_temperature(self, cfg):
 
 		c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
 		#c = get_client()
 		archiver = DataClient(c)
 
-		north_temp = "c7e33fa6-f683-36e9-b97a-7f096e4b57d4"
-		south_temp = "03099008-5224-3b61-b07e-eee445e64620"
-		central_temp = "c05385e5-a947-37a3-902e-f6ea45a43fe8"
-		east_temp = "b47ba370-bceb-39cf-9552-d1225d910039"
-		
-		#uuids = [north_temp]
-		#uuids = [south_temp]
-		#uuids = [central_temp]
-		uuids = [east_temp]
+		uuids = [cfg['UUIDS']['thermostat_temperature']]
 
 		temp_now = self.current_time
 
@@ -230,6 +224,7 @@ class Advise:
 		df['tin']=df['tin'].replace(to_replace=0, method='pad')
 		return df['tin']
 
+	# function that runs the shortest path algorithm and returns the action produced by the mpc
 	def advise(self):
 		self.advise_unit.shortest_path(self.root)
 		path = self.advise_unit.reconstruct_path()

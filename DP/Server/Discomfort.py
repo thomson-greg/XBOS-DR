@@ -2,7 +2,7 @@ import datetime, pytz
 from datetime import timedelta
 
 class Discomfort:
-	def __init__(self, now=datetime.datetime.now(pytz.timezone("America/Los_Angeles"))):
+	def __init__(self, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
 		
 		self.temp_now = now
 
@@ -11,7 +11,7 @@ class Discomfort:
 		weekno = self.temp_now.weekday()
 
 		if weekno<5:
-			now_time = (datetime.datetime.now(pytz.timezone("America/Los_Angeles")) + timedelta(minutes=node_time)).time()
+			now_time = (datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")) + timedelta(minutes=node_time)).time()
 
 			if now_time >= datetime.time(18,0) or now_time < datetime.time(7,0):
 				heating_setpoint = 62.

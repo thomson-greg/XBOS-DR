@@ -6,7 +6,7 @@ def toBase(n,base):
 	else:
 		return toBase(n//base,base) + convertString[n%base]
  
-
+# this is the module that generates all the possible combinations of heating/cooling/do nothing actions
 class Safety:
 	def __init__(self, max_temperature=86, min_temperature=54, noZones = 1):
 		self.max_temperature = max_temperature
@@ -37,7 +37,6 @@ class Safety:
 				actions = actions2
 				actions = list(set(actions))
 		return actions
-
 
 	def safety_check(self, temp):
 		flag = False
