@@ -44,9 +44,9 @@ filename = "thermostat_changes.txt" # file in which the thermostat changes are r
 def workday():
 	p = {"override": True, "heating_setpoint": 70., "cooling_setpoint": 76., "mode": 3}
 	print "workday",datetime.datetime.now()
-	for z in normal_zones:
-		print z,p
-		zones[z].write(p)
+	#for z in normal_zones:
+		#print z,p
+		#zones[z].write(p)
 
 	for z in normal_zones:
 		print z,p
