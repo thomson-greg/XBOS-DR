@@ -105,7 +105,8 @@ def normal_schedule(SimpleDR=False):
 		if now_time >= datetime.time(18,0) or now_time < datetime.time(7,0):
 			workday_inactive()
 		else:
-			ind=(now_time.hour+8)%24
+			#ind=(now_time.hour+8)%24
+			ind=(now_time.hour)%24
 			print data[ind]
 			if SimpleDR==True and data[ind]['Price']>0.8:
 				workday_inactive()
