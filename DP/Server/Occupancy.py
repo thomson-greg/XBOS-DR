@@ -57,8 +57,10 @@ class Occupancy:
 		# query the server to get all the available occupancy sensors
 		zone_name = cfg['zone']
 
-		c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-		#c = get_client()
+		if  cfg['Server']:
+			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+		else:
+			c = get_client()
 		archiver = DataClient(c)
 		hod = HodClient("ciee/hod",c)
 

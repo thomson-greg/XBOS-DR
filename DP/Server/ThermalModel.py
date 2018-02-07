@@ -59,8 +59,10 @@ class ThermalModel:
 
 			# query the server for the thermostat state and temperature
 
-			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-			#c = get_client()
+			if  cfg['Server']:
+				c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+			else:
+				c = get_client()
 			archiver = DataClient(c)
 
 			uuids = [cfg['UUIDS']['thermostat_temperature'], cfg['UUIDS']['thermostat_state']]

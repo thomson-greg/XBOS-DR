@@ -1,6 +1,7 @@
 import datetime, time, math, pytz, os, sys
 import pandas as pd
 import yaml
+import msgpack
 
 from Advise import Advise
 
@@ -19,8 +20,10 @@ with open(yaml_filename, 'r') as ymlfile:
 	cfg = yaml.load(ymlfile)
 
 # query server to get the available zones
-client = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-#client = get_client()
+if  cfg['Server']:
+	client = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+else:
+	client = get_client()
 hc = HodClientHTTP("http://ciee.cal-sdb.org")
 
 q = """SELECT ?uri ?zone WHERE {
@@ -78,7 +81,20 @@ def workday_inactive():
 				continue
 
 # in case that the mpc doesnt work properly run this
-def normal_schedule():
+def normal_schedule(SimpleDR=False):
+	if SimpleDR==True:
+		if  cfg['Server']:
+			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+		else:
+			c = get_client()
+		msg = c.query("xbos/events/dr/s.dr/sdb/i.xbos.dr_signal/signal/signal")[0]
+		for po in msg.payload_objects:
+			if po.type_dotted == (2,9,9,9):
+				data = msgpack.unpackb(po.content)
+		print "DR EVENT", data
+
+
+
 
 	weekno = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")).weekday()
 
@@ -89,7 +105,12 @@ def normal_schedule():
 		if now_time >= datetime.time(18,0) or now_time < datetime.time(7,0):
 			workday_inactive()
 		else:
-			workday()
+			ind=(now_time.hour+8)%24
+			print data[ind]
+			if SimpleDR==True and data[ind]['Price']>0.8:
+				workday_inactive()
+			else:
+				workday()
 	else:
 		workday_inactive()
 
@@ -98,8 +119,10 @@ def hvac_control():
 	try:
 
 		# query the server to lean the current setpoints and the state of the thermostat
-		c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-		#c = get_client()
+		if  cfg['Server']:
+			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+		else:
+			c = get_client()
 		archiver = DataClient(c)
 
 		uuids = [cfg['UUIDS']['thermostat_high'], cfg['UUIDS']['thermostat_low'], cfg['UUIDS']['thermostat_mode']]
@@ -226,14 +249,22 @@ def hvac_control():
 	return True
 
 if __name__ == '__main__':
+
+	SimpleDR = cfg['SimpleDR']
+
 	if not os.path.exists(filename):
 		f = open(filename   , 'w')
 		f.close()
 
 	starttime=time.time()
 	while True:
-		if not hvac_control():
-			print("Problem with MPC, entering normal schedule.")
-			normal_schedule()
+
+		if not SimpleDR:
+			if not hvac_control():
+				print("Problem with MPC, entering normal schedule.")
+				normal_schedule()
+		else:
+			normal_schedule(SimpleDR)
+
 		print datetime.datetime.now()
 		time.sleep(60.*15. - ((time.time() - starttime) % (60.*15.)))

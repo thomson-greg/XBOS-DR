@@ -21,3 +21,7 @@ advise:
     minimum_Safety_Temp: 54
     heating_Consumption: 4000  # watts
     cooling_Consumption: 4000  # watts
+
+SimpleDR: True
+
+Server: True

@@ -198,8 +198,10 @@ class Advise:
 	# function that returns the inside temperature of the zone
 	def inside_temperature(self, cfg):
 
-		c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-		#c = get_client()
+		if  cfg['Server']:
+			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
+		else:
+			c = get_client()
 		archiver = DataClient(c)
 
 		uuids = [cfg['UUIDS']['thermostat_temperature']]
