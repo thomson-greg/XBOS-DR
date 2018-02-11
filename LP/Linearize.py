@@ -1,55 +1,76 @@
 import numpy as np
+import yaml
+import sys
+
+import Occupancy
+
 from gurobipy import *
 
-from Occupation import Occupation
+
+def get_config():
+    try:
+        yaml_filename = sys.argv[1]
+    except:
+        sys.exit("Please specify the configuration file as: python2 controller.py config_file.yaml")
+
+    with open(yaml_filename, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+    return cfg
+
+
+def get_config_file(file):
+    with open(file, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
+    return cfg
 
 
 class LinearZones:
-    def __init__(self, priceBuy, priceSell, maxPowerHeating, maxPowerCooling, numZones, numTimesSteps, total_time,
-                 peak_cost=8.03):
-        """
-        :param priceBuy: A function of time and HVAC-Zone which returns the cost to buy a kilowatt at the given time and 
-        for the given zone. (Matrix zone x time)
-        :param priceSell: A function of time and HVAC-Zone which returns the revenue of selling a kilowatt at the given time and 
-        for the given zone. (Matrix zone x time)
-        :param maxPowerHeating: A matrix (zone x time) indicating the maxPower to be used for heating in any zone at any time.
-        :param maxPowerCooling: A matrix (zone x time) indicating the maxPower to be used for cooling in any zone at any time.
-        :param numZones: The number of HVAC zones.
-        :param numTimesSteps: The number of times steps from now to Horizon.
-        :param total_time: The total time in minutes of the timeframe.
-        :param peak_cost: The cost at which the peak consumption is priced. 
-        """
-        self.priceBuy = priceBuy  # look at DP EnergyConsumption.py
-        self.priceSell = priceSell  # set to zero for now since we won't sell energy in the US.
-        self.maxPowerHeating = maxPowerHeating  # TODO Marco. And we are not having same power for cooling and heating.
-        self.maxPowerCooling = maxPowerCooling  # TODO Note changed logic in script for this. maxCooling when action is negative and vice versa.
-        self.numZones = numZones
-        self.numTimesSteps = numTimesSteps
-        self.peakCost = peak_cost  # peack_cost dollars/kW
+    def __init__(self, config):
+        """:param:
+        config: The config file which has all the fields which are used in the current init. example: config_ciee.yml"""
+        self.numZones = len(config["Zones"])
+        self.deltaTime = config["interval_Length"]
+        self.numHours = config["hours"]
+        self.numTimesSteps = self.numHours / self.deltaTime
+
+
+        self.priceBuy = config["priceBuy"]  # look at DP EnergyConsumption.py
+        self.priceSell = config["priceSell"]  # set to zero for now since we won't sell energy in the US.
+
+        # TODO Note changed logic in script for this. maxCooling when action is negative and vice versa.
+        # TODO for now use a scalar which populates array. Array used for generality
+        self.maxPowerHeating = config["maxPowerHeating"] * np.ones((self.numZones, self.numTimesSteps))
+        self.maxPowerCooling = config["maxPowerCooling"] * np.ones((self.numZones, self.numTimesSteps))
+
+
+        self.peakCost = config["peakCost"]  # peak_cost dollars/kW
+
 
         # The last peak demands
-        self.lastPeakDemand = 0  # TODO needs to be filled in.
+        self.lastPeakDemand = config["lastPeakDemand"]  # TODO needs to be filled in.
 
+        # will be used to get the temperature setpoints.
+        # Intended matrix (numZones x numTimesSteps) for generality.
+        self.temperatureHighSet = config["maximum_Safety_Temp"] * np.ones((self.numZones, self.numTimesSteps))
+        self.temperatureLowSet = config["minimum_Safety_Temp"] * np.ones((self.numZones, self.numTimesSteps))
+
+        # TODO: set up with config
         self.leakageRate = np.ones(
             self.numZones)  # TODO Thermal model implement as in paper "AEC of Electricity-base Space Heating Systems" for each zone.
 
-        # To calculate energy from power.
-        self.deltaTime = float(total_time) / self.numTimesSteps
+
 
         # This is the heating efficiency parameter. Should be an array where the index is the corresponding zone.
         self.heatingEff = np.ones(self.numZones)  # For now it doesn't do anything.
 
         # Will represent the probability of occupation.
         # is intended to return a matrix where the row represents the ith zone and column the jth time-step.
-        self.occupationModel = Occupation()  # TODO
+        self.occupationModel = [Occupancy(get_config_file(zone)).predictions.values() for zone in config["Zones"]]
 
         # will be used to get the outside temperature.
         # is intended to return a matrix where the row represents the ith zone and column the jth time-step.
         self.outTemperature = np.zeros(self.numZones, self.numTimesSteps)  # "TODO. Ask Gabe."
 
-        # will be used to get the temperature setpoints.
-        # A matrix (numZones x numTimesSteps)
-        self.temperatureSetpoint = 0  # TODO load from config. Or just set with Discomfort. set two variables.
 
         # The prediction of the power consumption of the building as a numZones x numTimesSteps matrix.
         self.powerModel = np.zeros(self.numZones,
@@ -72,7 +93,7 @@ class LinearZones:
             range(self.numTimesSteps)
         ] for z in range(self.numZones)])
 
-        # We changed the following commented out to have only self.action.
+        # We changed the following commented out section to have only self.action.
         '''
         the variables for the linear program. They control heat or cool. For now we will use binary variables.
         # has dimension numZone x numTimeSteps.
@@ -88,18 +109,19 @@ class LinearZones:
         '''
 
         # This will be the eventual action to be taken.
-        # We constraint -1 <= self.action <= 1 and self.action is continuous.
-        # Where negative implies that we use that percentage of maxPowerCooling and positive
-        # for percentage of maxPowerHeating.
-        self.action = np.array([[self.model.addVar(lb=-1.0, ub=1.0,
-                                                   name="cool_zone{" + str(zone) + "}_time{" + str(time) + "}") for time
-                                 in
-                                 range(self.numTimesSteps)]
-                                for zone in range(self.numZones)])
+        # We constraint -self.maxPowerCooling <= self.action <= self.maxPowerHeating and self.action is continuous.
+        # It indicates how much power we should use for cooling or heating.
+        self.action = np.array(
+            [[self.model.addVar(lb=-self.maxPowerCooling[zone, time], ub=self.maxPowerHeating[zone, time],
+                                name="cool_zone{" + str(zone) + "}_time{" + str(time) + "}") for time
+              in
+              range(self.numTimesSteps)]
+             for zone in range(self.numZones)])
 
         # Discomfort array of the linear program where index is the zone. Used for objective.
-        self.discomfort = np.array([self.model.addVar(
-            name="discomfort_zone{" + str(zone) + "}") for zone in range(self.numZones)])
+        self.discomfort = np.array([[self.model.addVar(
+            name="discomfort_zone{" + str(zone) + "}" + "_time{" + time + "}") for time in range(self.numTimesSteps)]
+                                   for zone in range(self.numZones)])
 
         # Heating Consumption matrix of LP without powerModel. numZones x numTimeSteps.
         self.heatingConsumption = np.array([
@@ -124,6 +146,8 @@ class LinearZones:
         # The peak demand charge for the given time period.
         self.peakCharge = self.model.addVar(name="peakDemandCharge")
 
+    # following commented code was used for old action implementaiton.
+    '''
     def constrain_action(self):
         """Constraints the actions, in case I make them non Binary. TODO Upper and lower bounds can actually be set in 
         the addVar step"""
@@ -137,8 +161,10 @@ class LinearZones:
 
                 self.model.addConstr(self.heat[z][t] - self.cool[z][t] >= -1)
                 self.model.addConstr(self.heat[z][t] - self.cool[z][t] <= 1)
+    '''
 
     def set_objective(self):
+        # TODO Fix occupancy
         obj = LinExpr()
         obj += self.discomfort.dot(self.comfortBalancing)  # add the discomfort term
         obj += self.totalConsumption
@@ -150,45 +176,40 @@ class LinearZones:
         self.model.setObjective(obj, GRB.MAXIMIZE)
 
     def set_discomfort(self):
-        """Set the constraints for the discomfort. We are setting the total discomfort of a zone from now till the
-        end of the time horizon, since the objective in the paper has a double sum which can be interchanged."""
-        TDiff = (
-                    self.temperatureIn - self.temperatureSetpoint) * self.discounting  # TODO because TDiff is a varialbe. use discounting variable here for discomfort
+        """Set the constraints for the discomfort. If in temperature is inside the setpoint temperature band, 
+        then we have no discomfort. If it is beyond the band, then we have a linear discomfort as a function of the 
+        distance from the closest setpoint. The expected discomfort (where we multiply by probability of occupation) is
+        handled in the objective."""
         for zone in range(self.numZones):
-            # have to set two constraints to work with abs() values. We would actually like to work with the
-            # absolute value temperature difference, which is not allowed in LP's. So, we use a trick
-            # where we want the variable to be greater or equal to both the difference and negated difference.
-            # A picture of the real number line might help to see why this trick works.
-            self.model.addConstr(self.discomfort[zone] >= self.occupationModel[zone].dot(
-                TDiff[zone]))  # TODO fix the occupation model and how they are multiplied
-            self.model.addConstr(
-                self.discomfort[zone] >= -self.occupationModel[zone].dot(
-                    TDiff[zone]))  # TODO fix the occupation model and how they are multiplied
+            for time in range(self.numTimesSteps):
+                self.model.addConstr(self.discomfort[zone][time] >= (self.inTemperature - self.temperatureHighSet))
+                self.model.addConstr(self.discomfort[zone][time] >= (self.temperatureLowSet - self.inTemperature))
+                self.model.addConstr(self.discomfort[zone][time] >= 0)
 
     def set_heating_consumption(self):
         """Set the consumption for heating/cooling for every zone at every time step. Needs to be done because
         we can have negative valued actions."""
         for z in range(self.numZones):
             for t in range(self.numTimesSteps):
-                # using a trick where when the action is negative the self.action * self.maxPowerCooling larger and
-                # vice versa.
+                # using the abs value trick. if we are cooling then
+                # self.action < 0 and -self.action*const > self.action*const. self.action has units of power.
                 self.model.addConstr(
-                    self.heatingConsumption[z][t] >= -self.action[z][t] * self.maxPowerCooling[z][t] * self.deltaTime)
+                    self.totalConsumption[z][t] >= -self.action[z][t] * self.deltaTime)
                 self.model.addConstr(
-                    self.heatingConsumption[z][t] >= self.action[z][t] * self.maxPowerHeating[z][t] * self.deltaTime)
+                    self.heatingConsumption[z][t] >= self.action[z][t] * self.deltaTime)
 
     def set_total_consumption(self):
         """Set consumption for the whole building on time-step level. Sets energy quantities."""
         Cons_C = [sum(self.heatingConsumption[:, t]) for t in self.numTimesSteps]  # TODO might not work like this.
         for t in range(self.numTimesSteps):
-            # setting min of (0, Cons_C(t) - R'_C,t)
-            self.model.addConstr(self.heatingConsumption[t][0] <= 0)
-            self.model.addConstr(self.heatingConsumption[t][0] <= Cons_C[t] - sum(
+            # setting totalConsumption[0] to min of (0, Cons_C(t) - R'_C,t)
+            self.model.addConstr(self.totalConsumption[t][0] <= 0)
+            self.model.addConstr(self.totalConsumption[t][0] <= Cons_C[t] - sum(
                 self.powerModel[:, t]))  # assuming sum works as intended.
 
-            # setting max of (0, Cons_C(t) - R'_C,t)
-            self.model.addConstr(self.heatingConsumption[t][1] >= 0)
-            self.model.addConstr(self.heatingConsumption[t][1] >= Cons_C[t] - sum(
+            # setting totalConsumption[1] to max of (0, Cons_C(t) - R'_C,t)
+            self.model.addConstr(self.totalConsumption[t][1] >= 0)
+            self.model.addConstr(self.totalConsumption[t][1] >= Cons_C[t] - sum(
                 self.powerModel[:, t]))  # assuming sum works as intended.
 
     def set_peak_charge(self):
@@ -196,17 +217,15 @@ class LinearZones:
          For any further computation with power, just divide by self.deltaTime."""
         self.model.addConstr(self.peakCharge >= 0)  # added to make sure we never go below 0 and we are only charged.
         self.model.addConstr(self.peakCharge >= self.lastPeakDemand)  # Can't get lower than the last peak consumption.
-
-        for z in range(self.numZones):
-            for t in range(self.numTimesSteps):
-                # TODO Check if this is how we want to model the exchange. Thanos gives ok.
-                self.model.addConstr(self.peakCharge >= self.heatingConsumption[z][t] - self.powerModel[z][t])
+        # TODO check if right. had misconception
+        for t in range(self.numTimesSteps):
+            self.model.addConstr(self.peakCharge >= self.totalConsumption[t][1])
 
     def set_temperature_in(self):
         """Set the temperatureIn in self.model for the linear program as it depends on both self.heat and self.cool.
         Formula: $$$T^{in}(zone, time) = T^{in}(zone, 0)*(\prod_{i=0}^{t-1}\gamma^{time}(zone)) + 
                     \sum_{i=0}^{time-1} \epsilon(zone, i)* \prod_{k=i+1}^{t-1}\gamma(zone, k)$$$
-        where $$$\epsilon(zone, time) = (self.maxPower(zone, time)*self.action(zone, time) + 
+        where $$$\epsilon(zone, time) = (self.action(zone, time) + 
                 self.leakageRate(zone, time)*T^{out}(zone, time))*self.deltaTime$$$
         and where $$$\gamma(zone, time) = (1-self.leakageRate(zone,time)) * self.deltaTime$$$"""
 
@@ -214,8 +233,8 @@ class LinearZones:
             return 1 - self.leakageRate[zone][time] * self.deltaTime
 
         def get_epsilon(zone, time):
-            # return epsilon adjusted for which self.action we are using.
-            return (self.maxPower[zone][time] * self.action[zone][time] + \
+            # self.action already includes the power to be used.
+            return (self.action[zone][time] +
                     self.leakageRate[zone][time] * self.outTemperature[zone][time]) * self.deltaTime
 
         # stores the last epsilon and gamma values so i don't have to recompute them
@@ -231,5 +250,8 @@ class LinearZones:
                 last_epsilon_gamma_sum[z] = last_epsilon_gamma_sum[z] * get_gamma(z, t) + get_epsilon(z, t)
                 last_gamma_temperature[z] *= get_gamma(z, t)
 
-    def setTemperatureSetpoint(self):
-        self.temperatureSetpoint = "TODO"
+
+if __name__ == "__main__":
+    cfg = get_config()
+    LP = LinearZones(cfg)
+

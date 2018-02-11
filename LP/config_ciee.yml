@@ -1,0 +1,20 @@
+Zones:
+  South: "~/CIEE/XBOS-DR/DP/Server/config_south.yml"
+  North: "~/CIEE/XBOS-DR/DP/Server/config_north.yml"
+  Central: "~/CIEE/XBOS-DR/DP/Server/config_central.yml"
+  East: "~/CIEE/XBOS-DR/DP/Server/config_east.yml"
+
+advise:
+    lambda: 0.995
+    interval_Length: 15  # in minutes
+    hours: 4
+    maximum_Safety_Temp: 86 # intended (Matrix zone x time)
+    minimum_Safety_Temp: 54 # intended (Matrix zone x time)
+    maxPowerHeating: 4000  # watts intended (Matrix zone x time)
+    maxPowerCooling: 4000  # watts intended (Matrix zone x time)
+    priceBuy: 1 # dollar/ kwh
+    priceSell: 0 # dolalr/kwh
+    peakCost: 8.03 # dollar/kwh
+    lastPeakDemand: 0 # from last start time.
+
+#        :param peak_cost: The cost at which the peak consumption is priced.
