@@ -1,0 +1,31 @@
+Thermostat_changes_file: "thermostat_changes.txt"
+
+Advise:
+    Lambda: 0.995
+    Hours: 4
+    Maximum_Safety_Temp: 86
+    Minimum_Safety_Temp: 54
+    Heating_Consumption: 4000  # watts
+    Cooling_Consumption: 4000  # watts
+
+SimpleDR: True
+
+Interval_Length: 15  # in minutes
+
+Energy_rates: "winter_rates" # options are "server", "summer_rates", "winter_rates", "event_day_rates"
+
+Data_Manager:
+  Server : False
+  Zone: "SouthZone"
+  Entity_File: "fill_this.ent"
+  Agent_IP: '1.3.3.7:1337'
+  Wunderground_Key: '147c8cec00fcd16d'
+  Wunderground_Place: 'KCABERKE67'
+  UUIDS:
+      Thermostat_high: 'dbbf4a91-107a-3b15-b2c0-a49b54116daa'
+      Thermostat_low: 'eeadc8ed-6255-320d-b845-84f44748fe95'
+      Thermostat_mode: 'a4639323-1e57-3512-83fb-b01234378fd8'
+      Thermostat_temperature: '03099008-5224-3b61-b07e-eee445e64620'
+      Thermostat_state: 'dfb2b403-fd08-3e9b-bf3f-18c699ce40d6'
+      Energy_cost: '9dc5b5cd-8cb1-3dd3-b582-5ed6bf3f0083'
+      Temperature_Outside: '1c467b79-b314-3c1e-83e6-ea5e7048c37b'

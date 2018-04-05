@@ -144,14 +144,12 @@ class Advise:
 		Interval_Length = interval  # in minutes
 		Hours = predictions_hours
 		Intervals = Hours * 60 / Interval_Length
-		Predicted_Interval_Demands = [0]*Intervals #ignore this
-		Predicted_Interval_Usage = [0]*Intervals #ignore this
 		No_Of_Zones = 1 #ignore this
 		Maximum_Safety_Temp, Minimum_Safety_Temp = max_safe_temp, min_safe_temp
 		Heating_Consumption = heating_cons  # watts
 		Cooling_Consumption = cooling_cons  # watts
 		
-		max_demand = 0 #ignore this
+
 		self.plot =plot_bool
 		self.current_time = current_time
 		# collect data for the thermal model
@@ -163,7 +161,7 @@ class Advise:
 		safety = Safety(max_temperature=Maximum_Safety_Temp, min_temperature=Minimum_Safety_Temp, noZones=No_Of_Zones)
 		energy = EnergyConsumption(energy_cost_schedule, now=self.current_time, heat=Heating_Consumption, cool=Cooling_Consumption)
 		
-		Zones_Starting_Temps = [starting_temp]
+		Zones_Starting_Temps = [thermal_data['t_next'][-1]]
 		self.root = Node(Zones_Starting_Temps, 0)
 
 		# initialize the shortest path model
@@ -196,7 +194,7 @@ class Advise:
 
 if __name__ == '__main__':
 	from DataManager import DataManager
-	dm = DataManager()
+	dm = DataManager("config_south.yml")
 
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 60, dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),

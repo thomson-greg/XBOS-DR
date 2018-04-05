@@ -1,10 +1,8 @@
-import time, os, datetime, pytz
+import os, datetime, pytz
 import requests
-import urllib2
 import json
 import yaml
 from xbos import get_client
-from xbos.services.pundat import DataClient, make_dataframe
 from xbos.services.hod import HodClient
 from datetime import timedelta
 from xbos.services import mdal
@@ -37,14 +35,22 @@ def f3(row):
 
 class DataManager:
 
-	def __init__(self):
-		self.zone = "CentralZone"
-		self.server = False
-		self.entity = "thanos.ent"
-		self.agent = '172.17.0.1:28589'
-		self.uuids = ['03099008-5224-3b61-b07e-eee445e64620', 'dfb2b403-fd08-3e9b-bf3f-18c699ce40d6', '1c467b79-b314-3c1e-83e6-ea5e7048c37b']
-		self.wunderground_key = '147c8cec00fcd16d'
-		self.wunderground_place = 'KCABERKE67'
+	def __init__(self, yaml_filename, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+
+		with open(yaml_filename, 'r') as ymlfile:
+			cfg = yaml.load(ymlfile)
+
+		self.zone = cfg["Data_Manager"]["Zone"]
+		self.server = cfg["Data_Manager"]["Server"]
+		self.entity = cfg["Data_Manager"]["Entity_File"]
+		self.agent = cfg["Data_Manager"]["Agent_IP"]
+		self.uuids = [cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
+					  cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
+					  cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
+		self.wunderground_key =  cfg["Data_Manager"]["Wunderground_Key"]
+		self.wunderground_place = cfg["Data_Manager"]["Wunderground_Place"]
+		self.interval = cfg["Interval_Length"]
+		self.now = now
 
 
 	def preprocess_occ(self):
@@ -53,8 +59,8 @@ class DataManager:
 			c = get_client(agent = self.agent, entity=self.entity)
 		else:
 			c = get_client()
-		temp_now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))
-		archiver = DataClient(c)
+
+		#this only works for ciee, check how it should be writen properly:
 		hod = HodClient("ciee/hod", c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
@@ -73,24 +79,26 @@ class DataManager:
 			if i[0] == self.zone:
 				query_list.append(i[1])
 
-		start = '"' + temp_now.strftime('%Y-%m-%d %H:%M:%S') + ' PST"'
-		end = '"' + (temp_now - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S') + ' PST"'
+		c = mdal.MDALClient("xbos/mdal")
+		dfs = c.do_query({'Composition': query_list,
+						  'Selectors': [mdal.MAX] * len(query_list),
+						  'Time': {'T0': (self.now - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+								   'WindowSize': str(self.interval) + 'min',
+								   'Aligned': True}})
 
-		dfs = make_dataframe(archiver.window_uuids(query_list, end, start, '15min', timeout=30))
+		dfs = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
-		for uid, df in dfs.items():
-			if 'mean' in df.columns:
-				df = df[['mean']]
-			df.columns = ['occ']
-			dfs[uid] = df.resample('15min').mean()
-
-		df = dfs.values()[0]
-		if len(dfs) > 1:
-			for newdf in dfs.values()[1:]:
-				df['occ'] += newdf['occ']
-		df['occ'] = 1 * (df['occ'] > 0)
+		df = dfs[[query_list[0]]]
+		df.columns.values[0] = 'occ'
+		df.is_copy = False
+		df.columns = ['occ']
+		for i in range(1, len(query_list)):
+			df.loc[:, 'occ'] += dfs[query_list[i]]
+		df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
 
 		return df.tz_localize(None)
+
 
 	#problem with the time zone here, don't know why
 	def preprocess_therm(self):
@@ -100,13 +108,11 @@ class DataManager:
 		else:
 			c = get_client()
 
-
-		now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))
 		c = mdal.MDALClient("xbos/mdal", client=c)
 		dfs = c.do_query({'Composition': self.uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': '2017-07-20 00:00:00 PST',
-								   'T1': now.strftime('%Y-%m-%d %H:%M:%S') + ' PST',
+						  'Time': {'T0': '2017-07-21 00:00:00 UTC',
+								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': '1min',
 								   'Aligned': True}})
 
@@ -120,11 +126,11 @@ class DataManager:
 		df.dropna()
 
 		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
-		n = 15
+
 		listerino = []
 		for j in df.change_of_action.unique():
-			for dfs in [df[df['change_of_action'] == j][i:i + n] for i in
-						range(0, df[df['change_of_action'] == j].shape[0], n)]:
+			for dfs in [df[df['change_of_action'] == j][i:i + self.interval] for i in
+						range(0, df[df['change_of_action'] == j].shape[0], self.interval)]:
 				listerino.append({'time': dfs.index[0],
 								  'tin': dfs['tin'][0],
 								  't_next': dfs['tin'][-1],
@@ -134,7 +140,7 @@ class DataManager:
 		df = pd.DataFrame(listerino).set_index('time')
 		df['a1'] = df.apply(f1, axis=1)
 		df['a2'] = df.apply(f2, axis=1)
-		return df
+		return df.tz_localize(None)
 
 	def weather_fetch(self):
 
@@ -151,7 +157,7 @@ class DataManager:
 			data = weather.json()
 			with open('weather.json', 'w') as f:
 				json.dump(data, f)
-			myweather = json.load("weather.json")
+			myweather = json.load(open("weather.json"))
 
 		weather_predictions = {}
 		for data in myweather['hourly_forecast']:
@@ -160,7 +166,7 @@ class DataManager:
 		return weather_predictions
 
 if __name__ == '__main__':
-	dm = DataManager()
+	dm = DataManager("config_south.yml")
 	print dm.weather_fetch()
 	print dm.preprocess_therm()
 	print dm.preprocess_occ()
