@@ -8,6 +8,7 @@ from datetime import timedelta
 from xbos.services import mdal
 import pandas as pd
 
+# TODO add energy data acquisition
 
 def f1(row):
 	if row['action'] == 1.:

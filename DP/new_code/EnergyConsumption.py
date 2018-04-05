@@ -1,10 +1,14 @@
 import datetime, pytz
 from datetime import timedelta
 
+# TODO ask someone what is going wrong with the price archiver
+# TODO add energy prediction capabilities
+
 class EnergyConsumption:
 
-	def __init__(self, mode, energy_df=None, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")), heat=0.075, cool=1.25, vent=0.02):
+	def __init__(self, mode, interval, energy_df=None, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")), heat=0.075, cool=1.25, vent=0.02):
 
+		self.interval = interval
 		self.heat = heat
 		self.cool = cool
 		self.vent = vent
@@ -12,11 +16,12 @@ class EnergyConsumption:
 		self.now = now
 		self.df = energy_df
 
-	def calc_cost(self, action, time, interval=15):
+	def calc_cost(self, action, time):
 
-		now = self.now + timedelta(minutes=time*interval)
+		now = self.now + timedelta(minutes=time*self.interval)
 		weekno = now.weekday()
-		#the server one does not work yet, needs fixing
+		# not implemented yet, needs fixing from the archiver
+		# (always says 0, problem unless energy its free and noone informed me)
 		if self.mode == "server":
 			price = self.df['cost'][time]
 		elif self.mode == "summer_rates":
@@ -41,17 +46,16 @@ class EnergyConsumption:
 					price = 0.20
 			else:
 				price = 0.20
-		else:
+		else: #peak charges
 
 			if weekno<5:
-				temp_now = self.now + timedelta(minutes=time*interval)
-				if temp_now.time() >= datetime.time(8,30) and temp_now.time() < datetime.time(12,0):
+				if self.now.time() >= datetime.time(8,30) and self.now.time() < datetime.time(12,0):
 					price = 0.231
-				elif temp_now.time() >= datetime.time(12,0) and temp_now.time() < datetime.time(14,0):
+				elif self.now.time() >= datetime.time(12,0) and self.now.time() < datetime.time(14,0):
 					price = 0.254
-				elif temp_now.time() >= datetime.time(14,0) and temp_now.time() < datetime.time(18,0):
+				elif self.now.time() >= datetime.time(14,0) and self.now.time() < datetime.time(18,0):
 					price = 0.854
-				elif temp_now.time() >= datetime.time(18,0) and temp_now.time() < datetime.time(21,30):
+				elif self.now.time() >= datetime.time(18,0) and self.now.time() < datetime.time(21,30):
 					price = 0.231
 				else:
 					price = 0.203
@@ -60,11 +64,11 @@ class EnergyConsumption:
 
 
 		if action == 'Heating' or action == '2':
-			return (self.heat * float(interval) / 60.)*price
+			return (self.heat * float(self.interval) / 60.)*price
 		elif action == 'Cooling' or action == '1':
-			return (self.cool * float(interval) / 60.)*price
+			return (self.cool * float(self.interval) / 60.)*price
 		elif action == 'Ventilation':
-			return (self.vent * float(interval) / 60.)*price
+			return (self.vent * float(self.interval) / 60.)*price
 		elif action == 'Do Nothing' or action == '0':
 			return 0
 		else:

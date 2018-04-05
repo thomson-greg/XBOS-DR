@@ -4,6 +4,9 @@ from datetime import timedelta
 from scipy.optimize import curve_fit
 from sklearn.utils import shuffle
 
+# TODO learn ventilation?
+# TODO find better padding function?
+
 # WE ARE NOT LEARNING VENTILATION RIGHT NOW
 # This is the thermal model function
 def func(X, c1, c2, c3):
