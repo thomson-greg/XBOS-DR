@@ -36,33 +36,24 @@ def f3(row):
 
 class DataManager:
 
-	def __init__(self, yaml_filename, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+	def __init__(self, cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
-		with open(yaml_filename, 'r') as ymlfile:
-			cfg = yaml.load(ymlfile)
-
+		self.cfg = cfg
+		self.pytz_timezone = cfg["Data_Manager"]["Pytz_Timezone"]
 		self.zone = cfg["Data_Manager"]["Zone"]
-		self.server = cfg["Data_Manager"]["Server"]
-		self.entity = cfg["Data_Manager"]["Entity_File"]
-		self.agent = cfg["Data_Manager"]["Agent_IP"]
-		self.uuids = [cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
-					  cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
-					  cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
-		self.wunderground_key =  cfg["Data_Manager"]["Wunderground_Key"]
-		self.wunderground_place = cfg["Data_Manager"]["Wunderground_Place"]
 		self.interval = cfg["Interval_Length"]
 		self.now = now
+
+		if cfg["Data_Manager"]["Server"]:
+			self.c = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
+		else:
+			self.c = get_client()
 
 
 	def preprocess_occ(self):
 
-		if self.server:
-			c = get_client(agent = self.agent, entity=self.entity)
-		else:
-			c = get_client()
-
-		#this only works for ciee, check how it should be writen properly:
-		hod = HodClient("ciee/hod", c)
+				#this only works for ciee, check how it should be writen properly:
+		hod = HodClient("ciee/hod", self.c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 		  ?sensor rdf:type brick:Occupancy_Sensor .
@@ -104,13 +95,12 @@ class DataManager:
 	#problem with the time zone here, don't know why
 	def preprocess_therm(self):
 
-		if self.server:
-			c = get_client(agent = self.agent, entity="thanos.ent")
-		else:
-			c = get_client()
+		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
+				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
+				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
 
-		c = mdal.MDALClient("xbos/mdal", client=c)
-		dfs = c.do_query({'Composition': self.uuids,
+		c = mdal.MDALClient("xbos/mdal", client=self.c)
+		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
 						  'Time': {'T0': '2017-07-21 00:00:00 UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
@@ -118,7 +108,7 @@ class DataManager:
 								   'Aligned': True}})
 
 		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
-		df = df.rename(columns={self.uuids[0]: 'tin', self.uuids[1]: 'a', self.uuids[2]:'t_out'})
+		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
 
 		df = df.fillna(method='pad')
 		df['a'] = df.apply(f3, axis=1)
@@ -145,16 +135,19 @@ class DataManager:
 
 	def weather_fetch(self):
 
+		wunderground_key =  self.cfg["Data_Manager"]["Wunderground_Key"]
+		wunderground_place = self.cfg["Data_Manager"]["Wunderground_Place"]
+
 		if not os.path.exists("weather.json"):
-			weather = requests.get("http://api.wunderground.com/api/"+ self.wunderground_key+ "/hourly/q/pws:"+self.wunderground_place+".json")
+			weather = requests.get("http://api.wunderground.com/api/"+ wunderground_key+ "/hourly/q/pws:"+ wunderground_place +".json")
 			data = weather.json()
 			with open('weather.json', 'w') as f:
 				json.dump(data, f)
 
 		myweather = json.load(open("weather.json"))
 		if int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"]) < \
-			datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")).hour:
-			weather = requests.get("http://api.wunderground.com/api/" + self.wunderground_key + "/hourly/q/pws:" + self.wunderground_place + ".json")
+			self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour:
+			weather = requests.get("http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
 			data = weather.json()
 			with open('weather.json', 'w') as f:
 				json.dump(data, f)
@@ -166,8 +159,33 @@ class DataManager:
 
 		return weather_predictions
 
+	def thermostat_setpoints(self):
+
+		uuids = [self.cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
+				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
+				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
+
+		c = mdal.MDALClient("xbos/mdal", client=self.c)
+		dfs = c.do_query({'Composition': uuids,
+						  'Selectors': [mdal.MEAN, mdal.MEAN, mdal.MEAN],
+						  'Time': {'T0': (self.now - timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+								   'WindowSize': '1min',
+								   'Aligned': True}})
+
+		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+		df = df.rename(columns={uuids[0]: 'T_High', uuids[1]: 'T_Low', uuids[2]: 'T_Mode'})
+
+		return df['T_High'][-1], df['T_Low'][-1], df['T_Mode'][-1]
+
+
 if __name__ == '__main__':
-	dm = DataManager("config_south.yml")
+
+	with open("config_south.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg)
 	print dm.weather_fetch()
 	print dm.preprocess_therm()
 	print dm.preprocess_occ()
+	print dm.thermostat_setpoints()

@@ -1,20 +1,24 @@
 Thermostat_changes_file: "thermostat_changes.txt"
 
 Advise:
-    Lambda: 0.995
-    Hours: 4
-    Maximum_Safety_Temp: 86
-    Minimum_Safety_Temp: 54
-    Heating_Consumption: 4000  # watts
-    Cooling_Consumption: 4000  # watts
+  Print_Graph: False
+  Lambda: 0.995
+  Hours: 4
+  Maximum_Safety_Temp: 86
+  Minimum_Safety_Temp: 54
+  Heating_Consumption: 0.075  # kwatts
+  Cooling_Consumption: 1.25  # kwatts
+  Max_Actions: 400 #int
+  Thermal_Precision: 400. #float
 
-SimpleDR: True
+SimpleDR: False
 
 Interval_Length: 15  # in minutes
 
 Energy_rates: "winter_rates" # options are "server", "summer_rates", "winter_rates", "event_day_rates"
 
 Data_Manager:
+  Pytz_Timezone: "America/Los_Angeles"
   Server : False
   Zone: "SouthZone"
   Entity_File: "fill_this.ent"
