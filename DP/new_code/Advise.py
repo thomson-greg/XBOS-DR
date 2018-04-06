@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+import yaml
 
 from ThermalModel import ThermalModel
 from Occupancy import Occupancy
@@ -151,7 +152,7 @@ class Advise:
 		disc = Discomfort(now=self.current_time)
 		th = ThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
 						  max_actions=max_actions, thermal_precision=thermal_precision)
-		occ = Occupancy(occupancy_data, interval)
+		occ = Occupancy(occupancy_data, interval, predictions_hours)
 		safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
 		energy = EnergyConsumption(energy_cost_schedule, interval, now=self.current_time,
 								   heat=heating_cons, cool=cooling_cons)
@@ -187,7 +188,10 @@ class Advise:
 
 if __name__ == '__main__':
 	from DataManager import DataManager
-	dm = DataManager("config_south.yml")
+	with open("config_south.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg)
 
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),

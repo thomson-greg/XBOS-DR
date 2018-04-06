@@ -47,11 +47,11 @@ def predict(data, now, similar_moments, prediction_time, resample_time):
 
 # TODO find the right number of similar dates and days of data (days of data are in DataManager)
 class Occupancy:
-	def __init__(self, df, interval):
+	def __init__(self, df, interval, hours):
 
 		observation_length_addition = 4*60
 		k = 5
-		prediction_time = 4*60
+		prediction_time = hours*60
 		resample_time = interval
 		now = df.index[-1]
 		
