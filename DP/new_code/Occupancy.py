@@ -49,7 +49,7 @@ def predict(data, now, similar_moments, prediction_time, resample_time):
 class Occupancy:
 	def __init__(self, df, interval, hours):
 
-		observation_length_addition = 4*60
+		observation_length_addition = 4*60 # TODO why is this hardcoded? 
 		k = 5
 		prediction_time = hours*60
 		resample_time = interval
