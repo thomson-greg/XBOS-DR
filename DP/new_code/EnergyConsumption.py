@@ -76,5 +76,5 @@ class EnergyConsumption:
 			return 0
 
 if __name__ == '__main__':
-	en_cons = EnergyConsumption("winter_rates")
+	en_cons = EnergyConsumption("winter_rates", 15)
 	print en_cons.calc_cost("1", 0)

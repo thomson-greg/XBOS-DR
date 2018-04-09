@@ -10,6 +10,7 @@ Advise:
   Cooling_Consumption: 1.25  # kwatts
   Max_Actions: 400 #int
   Thermal_Precision: 400. #float
+  Occupancy_Obs_Len_Addition: 4
 
 SimpleDR: False
 

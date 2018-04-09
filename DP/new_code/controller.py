@@ -62,7 +62,8 @@ def hvac_control(cfg, tstats, normal_zones):
 					 cfg["Advise"]["Heating_Consumption"],
 					 cfg["Advise"]["Cooling_Consumption"],
 					 cfg["Advise"]["Max_Actions"],
-					 cfg["Advise"]["Thermal_Precision"])
+					 cfg["Advise"]["Thermal_Precision"],
+					 cfg["Advise"]["Occupancy_Obs_Len_Addition"])
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:

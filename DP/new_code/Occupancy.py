@@ -2,12 +2,13 @@ import pandas as pd
 from datetime import timedelta
 import numpy as np
 import math
+from scipy.spatial import distance
 
 def mins_in_day(timestamp):
 	return timestamp.hour * 60 + timestamp.minute
 
 def hamming_distance(a, b):
-	return np.count_nonzero(a != b)
+	return distance.hamming(a, b)
 
 # calculate and return the k most similar dates with today
 def find_similar_days(training_data, now, observation_length, k, method=hamming_distance):
@@ -47,9 +48,9 @@ def predict(data, now, similar_moments, prediction_time, resample_time):
 
 # TODO find the right number of similar dates and days of data (days of data are in DataManager)
 class Occupancy:
-	def __init__(self, df, interval, hours):
+	def __init__(self, df, interval, hours, occ_obs_len_addition):
 
-		observation_length_addition = 4*60 # TODO why is this hardcoded? 
+		observation_length_addition = occ_obs_len_addition*60
 		k = 5
 		prediction_time = hours*60
 		resample_time = interval
@@ -63,7 +64,11 @@ class Occupancy:
 		return self.predictions[0][now_time]
 
 if __name__ == '__main__':
+	import yaml
 	from DataManager import DataManager
-	dm = DataManager()
-	occ = Occupancy(dm.preprocess_occ())
+	with open("config_south.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg)
+	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4)
 	print occ.occ(0)

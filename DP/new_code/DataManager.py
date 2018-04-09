@@ -1,7 +1,6 @@
 import os, datetime, pytz
 import requests
 import json
-import yaml
 from xbos import get_client
 from xbos.services.hod import HodClient
 from datetime import timedelta
@@ -74,7 +73,7 @@ class DataManager:
 		c = mdal.MDALClient("xbos/mdal")
 		dfs = c.do_query({'Composition': query_list,
 						  'Selectors': [mdal.MAX] * len(query_list),
-						  'Time': {'T0': (self.now - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+						  'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': str(self.interval) + 'min',
 								   'Aligned': True}})
@@ -180,7 +179,7 @@ class DataManager:
 
 
 if __name__ == '__main__':
-
+	import yaml
 	with open("config_south.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 

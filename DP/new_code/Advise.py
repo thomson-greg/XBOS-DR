@@ -143,7 +143,8 @@ class EVA:
 class Advise:
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
 				 energy_cost_schedule, lamda, interval, predictions_hours, plot_bool,
-				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions, thermal_precision):
+				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
+				 thermal_precision, occ_obs_len_addition):
 
 		self.plot =plot_bool
 		self.current_time = current_time
@@ -152,7 +153,7 @@ class Advise:
 		disc = Discomfort(now=self.current_time)
 		th = ThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
 						  max_actions=max_actions, thermal_precision=thermal_precision)
-		occ = Occupancy(occupancy_data, interval, predictions_hours)
+		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition)
 		safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
 		energy = EnergyConsumption(energy_cost_schedule, interval, now=self.current_time,
 								   heat=heating_cons, cool=cooling_cons)
@@ -196,7 +197,7 @@ if __name__ == '__main__':
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 "winter_rates", 0.99995, 15, 1, True,
-				 87, 55, 0.075, 1.25, 400, 400.)
+				 87, 55, 0.075, 1.25, 400, 400., 4)
 
 	print adv.advise()
 	

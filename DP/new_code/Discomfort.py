@@ -38,4 +38,4 @@ class Discomfort:
 
 if __name__ == '__main__':
 	disc = Discomfort()
-	print disc.disc(50, 0.8, 0, 15)
+	print disc.disc(60, 0.8, 0, 15)
