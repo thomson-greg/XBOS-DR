@@ -8,6 +8,7 @@ from xbos.services import mdal
 import pandas as pd
 
 # TODO add energy data acquisition
+# TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
 
 def f1(row):
 	if row['action'] == 1.:

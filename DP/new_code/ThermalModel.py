@@ -67,7 +67,12 @@ class ThermalModel:
 
 
 if __name__ == '__main__':
+	import yaml
 	from DataManager import DataManager
-	dm = DataManager()
+
+	with open("config_south.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg)
 	tm = ThermalModel(dm.preprocess_therm(), dm.weather_fetch())
 	print tm.next_temperature(70, '2', 0)
