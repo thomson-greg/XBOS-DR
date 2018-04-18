@@ -8,21 +8,23 @@ class EnergyConsumption:
 
 	def __init__(self, mode, interval, energy_df=None, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")), heat=0.075, cool=1.25, vent=0.02):
 
-		self.interval = interval
-		self.heat = heat
-		self.cool = cool
-		self.vent = vent
-		self.mode = mode
+		self.interval = interval # pricing time interval (mins)
+		self.heat = heat # cost of heating (kWh)
+		self.cool = cool # cost of cooling (kWh)
+		self.vent = vent # cost of ventilation (kWh)
+		self.mode = mode # type of pricing (server, summer rates, winter rates, peak)
 		self.now = now
 		self.df = energy_df
 
 	def calc_cost(self, action, time):
-
+		"""
+		Method that calculates cost depending on time and pricing mode
+		"""
 		now = self.now + timedelta(minutes=time*self.interval)
 		weekno = now.weekday()
-		# not implemented yet, needs fixing from the archiver
-		# (always says 0, problem unless energy its free and noone informed me)
 		if self.mode == "server":
+			# not implemented yet, needs fixing from the archiver
+			# (always says 0, problem unless energy its free and noone informed me)
 			price = self.df['cost'][time]
 		elif self.mode == "summer_rates":
 

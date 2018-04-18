@@ -8,7 +8,6 @@ from Advise import Advise
 from xbos import get_client
 from xbos.services.hod import HodClientHTTP
 from xbos.devices.thermostat import Thermostat
-from xbos.services.pundat import DataClient, make_dataframe
 
 # TODO only one zone at a time, making multizone comes soon
 

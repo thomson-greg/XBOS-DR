@@ -10,7 +10,11 @@ import pandas as pd
 # TODO add energy data acquisition
 # TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
 
+
 def f1(row):
+	"""
+	helper function to format the thermal model dataframe
+	"""
 	if row['action'] == 1.:
 		val = 1
 	else:
@@ -20,6 +24,9 @@ def f1(row):
 
 # if state is 2 we are doing cooling
 def f2(row):
+	"""
+	helper function to format the thermal model dataframe
+	"""
 	if row['action'] == 2.:
 		val = 1
 	else:
@@ -27,6 +34,9 @@ def f2(row):
 	return val
 
 def f3(row):
+	"""
+	helper function to format the thermal model dataframe
+	"""
 	if row['a'] > 0 and row['a']<=1.:
 		return 1
 	elif row['a']>1 and row['a']<=2.:
@@ -34,8 +44,11 @@ def f3(row):
 	else:
 		return 0
 
-class DataManager:
 
+class DataManager:
+	"""
+	# Class that handles all the data fetching and some of the preprocess
+	"""
 	def __init__(self, cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
 		self.cfg = cfg
@@ -51,8 +64,12 @@ class DataManager:
 
 
 	def preprocess_occ(self):
-
-				#this only works for ciee, check how it should be writen properly:
+		"""
+		Returns the required dataframe for the occupancy predictions
+		-------
+		Pandas DataFrame
+		"""
+		#this only works for ciee, check how it should be writen properly:
 		hod = HodClient("ciee/hod", self.c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
@@ -61,16 +78,18 @@ class DataManager:
 		  ?sensor bf:uuid ?uuid .
 		  ?zone rdf:type brick:HVAC_Zone
 		};
-		"""
+		""" # get all the occupancy sensors uuids
 
-		results = hod.do_query(occ_query)
-		uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']]
+		results = hod.do_query(occ_query) # run the query
+		uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']] # unpack
 
+		# only choose the sensors for the zone specified in cfg
 		query_list = []
 		for i in uuids:
 			if i[0] == self.zone:
 				query_list.append(i[1])
 
+		# get the sensor data
 		c = mdal.MDALClient("xbos/mdal")
 		dfs = c.do_query({'Composition': query_list,
 						  'Selectors': [mdal.MAX] * len(query_list),
@@ -85,6 +104,7 @@ class DataManager:
 		df.columns.values[0] = 'occ'
 		df.is_copy = False
 		df.columns = ['occ']
+		# perform OR on the data, if one sensor is activated, the whole zone is considered occupied
 		for i in range(1, len(query_list)):
 			df.loc[:, 'occ'] += dfs[query_list[i]]
 		df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
@@ -92,13 +112,13 @@ class DataManager:
 		return df.tz_localize(None)
 
 
-	#problem with the time zone here, don't know why
 	def preprocess_therm(self):
 
 		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
 
+		# get the thermostat data
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
@@ -110,6 +130,7 @@ class DataManager:
 		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
 
+		# thermal data preprocess starts here
 		df = df.fillna(method='pad')
 		df['a'] = df.apply(f3, axis=1)
 		df['tin'] = df['tin'].replace(to_replace=0, method='pad')

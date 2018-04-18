@@ -14,8 +14,11 @@ from utils import plotly_figure
 import plotly.offline as py
 
 
-# this is a Node of the graph
+
 class Node:
+	"""
+	# this is a Node of the graph for the shortest path
+	"""
 	def __init__(self, temps, time):
 		self.temps = temps
 		self.time = time
@@ -32,11 +35,26 @@ class Node:
 		return "{0}-{1}".format(self.time, self.temps)
 
 
-# The EVA class contains the shortest path algorithm and its utility functions 
 class EVA:
 	def __init__(self, current_time, l, pred_window, interval, discomfort,
 				 thermal, occupancy, safety, energy, root=Node([75], 0), noZones=1):
-
+		"""
+		Constructor of the Evaluation Class
+		The EVA class contains the shortest path algorithm and its utility functions
+		Parameters
+		----------
+		current_time : datetime.datetime
+		l : float (0 - 1)
+		pred_window : int
+		interval : int
+		discomfort : Discomfort
+		thermal : ThermalModel
+		occupancy : Occupancy
+		safety : Safety
+		energy : EnergyConsumption
+		root : Node
+		noZones : int
+		"""
 		# initialize class constants
 		self.noZones = noZones
 		self.current_time = current_time
@@ -56,18 +74,30 @@ class EVA:
 
 		self.g.add_node(root, usage_cost=np.inf, best_action=None)
 
-	# util function that convers from integer that converts from relevant time to real time
 	def get_real_time(self, node_time):
+		"""
+		util function that converts from relevant time to real time
+		Parameters
+		----------
+		node_time : int
+
+		Returns
+		-------
+		int
+		"""
 		return self.current_time + datetime.timedelta(minutes=node_time)
 
 	# the shortest path algorithm
 	def shortest_path(self, from_node):
 		"""
-		Creates the graph using DFS while we determine the best path
-		:param from_node: the node we are currently on
+		Creates the graph using DFS and calculates the shortest path
+
+		Parameters
+		----------
+		from_node : node being examined right now
 		"""
 
-		# add the final nodes when algorithm goes past the target prediction time 
+		# add the final nodes when algorithm goes past the target prediction time
 		if self.get_real_time(from_node.time) >= self.target:
 			self.g.add_node(from_node, usage_cost=0, best_action=None)
 			return
@@ -78,7 +108,7 @@ class EVA:
 		# iterate for each available action
 		for action in action_set:
 			
-			# predict temperature and energy consumption of action
+			# predict temperature and energy cost of action
 			new_temperature = []
 			consumption = []
 			for i in range(self.noZones):
@@ -125,8 +155,18 @@ class EVA:
 					continue
 				self.g.add_node(from_node, best_action=new_node, usage_cost=this_path_cost)
 
-	# util function that reconstructs the best action path
+
 	def reconstruct_path(self, graph=None):
+		"""
+		Util function that reconstructs the best action path
+		Parameters
+		----------
+		graph : networkx graph
+
+		Returns
+		-------
+		List
+		"""
 		if graph is None:
 			graph = self.g
 
@@ -139,8 +179,8 @@ class EVA:
 
 		return path
 
-# the Advise class initializes all the 
 class Advise:
+	# the Advise class initializes all the Models and runs the shortest path algorithm
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
 				 energy_cost_schedule, lamda, interval, predictions_hours, plot_bool,
 				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
@@ -175,8 +215,13 @@ class Advise:
 			root=self.root,
 		)	
 
-	# function that runs the shortest path algorithm and returns the action produced by the mpc
 	def advise(self):
+		"""
+		function that runs the shortest path algorithm and returns the action produced by the mpc
+		Returns
+		-------
+		String
+		"""
 		self.advise_unit.shortest_path(self.root)
 		path = self.advise_unit.reconstruct_path()
 		action = self.advise_unit.g[path[0]][path[1]]['action']

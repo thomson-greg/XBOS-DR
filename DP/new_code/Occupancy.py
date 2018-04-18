@@ -5,15 +5,43 @@ import math
 from scipy.spatial import distance
 
 def mins_in_day(timestamp):
+	"""
+	Helper function to calculate how many minutes a certain day has
+	"""
 	return timestamp.hour * 60 + timestamp.minute
 
 def hamming_distance(a, b):
+	"""
+	Calculate the hamming distance
+	Parameters
+	----------
+	a : ndarray
+	b : ndarray
+	Returns
+	-------
+	ndarray
+	"""
 	return distance.hamming(a, b)
 
-# calculate and return the k most similar dates with today
 def find_similar_days(training_data, now, observation_length, k, method=hamming_distance):
+	"""
+	Calculate and return the k most similar dates with today
+
+	Parameters
+	----------
+	training_data : Occupancy Data
+	observation_length : Minutes added from previous date, mostly needed for early morning
+	k : # of most similar days
+	method : similarity method for sorting
+
+	Returns
+	-------
+	Indexes for the most similar days
+	"""
+
 	min_time = training_data.index[0] + timedelta(minutes=observation_length)
-	# Find moments in our dataset that have the same hour/minute and is_weekend() == weekend.
+
+	# Find moments in our dataset that have the same hour/minute
 
 	selector = ((training_data.index.minute == now.minute) &
 				(training_data.index.hour == now.hour) &
@@ -22,6 +50,7 @@ def find_similar_days(training_data, now, observation_length, k, method=hamming_
 	similar_moments = training_data[selector][:-1]
 	obs_td = timedelta(minutes=observation_length)
 
+	#calculate the similarity of each day in the dataset with today
 	similar_moments['Similarity'] = [
 		method(
 			training_data[(training_data.index >= now - obs_td) &
@@ -34,15 +63,19 @@ def find_similar_days(training_data, now, observation_length, k, method=hamming_
 	indexes = (similar_moments.sort_values('Similarity', ascending=True).head(k).index)
 	return indexes
 
-# predict the expected occupancy prediction_time ahead
 def predict(data, now, similar_moments, prediction_time, resample_time):
-
+	"""
+	Using the find_similar_days method, calculate the probability of occupancy
+	"""
+	# initialize the prediction list
 	prediction = np.zeros((int(math.ceil(prediction_time/resample_time)) + 1, len(data.columns)))
+	# calculate the probability of occupancu
 	for i in similar_moments:
 		prediction += float(1.0 / float(len(similar_moments))) * data[(data.index >= i) & (data.index <= i + timedelta(minutes=prediction_time))]
-
+	# add the known occupancy for the current time to the start of the list
 	prediction[0] = data[data.index == now]
-	time_index = pd.date_range(now, now+timedelta(minutes=prediction_time),freq='15T')
+
+	time_index = pd.date_range(now, now+timedelta(minutes=prediction_time), freq=str(resample_time)+'T')
 	return pd.DataFrame(data=prediction, index=time_index)
 
 
@@ -50,10 +83,10 @@ def predict(data, now, similar_moments, prediction_time, resample_time):
 class Occupancy:
 	def __init__(self, df, interval, hours, occ_obs_len_addition):
 
-		observation_length_addition = occ_obs_len_addition*60
-		k = 5
-		prediction_time = hours*60
-		resample_time = interval
+		observation_length_addition = occ_obs_len_addition*60 # minutes added from prev date
+		k = 5 # number of similar days, not in config - needs validation
+		prediction_time = hours*60 # # of hours ahead for prediction
+		resample_time = interval # interval length
 		now = df.index[-1]
 		
 		observation_length = mins_in_day(now) + observation_length_addition
@@ -61,6 +94,9 @@ class Occupancy:
 		self.predictions = predict(df, now, similar_moments, prediction_time, resample_time)
 		
 	def occ(self, now_time):
+		"""
+		Occupancy getter
+		"""
 		return self.predictions[0][now_time]
 
 if __name__ == '__main__':

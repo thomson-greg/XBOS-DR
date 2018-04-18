@@ -9,9 +9,22 @@ class Discomfort:
 		self.temp_now = now
 
 	def disc(self, t_in, occ, node_time, interval):
+		"""
+		Calculate discomfort given certain temperature, occupancy prob
+		Parameters
+		----------
+		t_in :
+		occ : probability of occupancy
+		node_time : minutes after starting time
+		interval : interval length
 
+		Returns
+		-------
+
+		"""
+
+		# different setpoints for weekdays and weekends
 		weekno = self.temp_now.weekday()
-
 		if weekno<5:
 			now_time = (self.temp_now + timedelta(minutes=node_time)).time()
 
