@@ -22,3 +22,10 @@ utils.py : contain graph utility methods
 
 Safety.py : Contains the safety class, which is responsible for the available actions for the algorithm, and all the
 checks needed to ensure the safety constraints are met
+
+
+TODO 4 Gabe:
+
+* Historical weather forecasting reports (needed to integrate the evaluation)
+* Confirm the integrity of the Brick queries
+* Pricing, occupancy, setpoints from CMU and UI respectively 
