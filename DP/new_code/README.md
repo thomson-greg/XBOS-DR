@@ -24,8 +24,9 @@ Safety.py : Contains the safety class, which is responsible for the available ac
 checks needed to ensure the safety constraints are met
 
 
-TODO 4 Gabe:
+TODO:
 
 * Historical weather forecasting reports (needed to integrate the evaluation)
 * Confirm the integrity of the Brick queries
-* Pricing, occupancy, setpoints from CMU and UI respectively 
+* Pricing, occupancy, setpoints from CMU and UI respectively
+* Manual Tstat controls (what to do with them? store them?)
