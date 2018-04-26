@@ -27,6 +27,7 @@ checks needed to ensure the safety constraints are met
 TODO:
 
 * Historical weather forecasting reports (needed to integrate the evaluation)
+* Save recent weather forecasting report for an hour (see json)
 * Confirm the integrity of the Brick queries
 * Pricing, occupancy, setpoints from CMU and UI respectively
 * Manual Tstat controls (what to do with them? store them?)
