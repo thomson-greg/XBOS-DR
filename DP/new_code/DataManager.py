@@ -11,40 +11,6 @@ import pandas as pd
 # TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
 
 
-def f1(row):
-	"""
-	helper function to format the thermal model dataframe
-	"""
-	if row['action'] == 1.:
-		val = 1
-	else:
-		val = 0
-	return val
-
-
-# if state is 2 we are doing cooling
-def f2(row):
-	"""
-	helper function to format the thermal model dataframe
-	"""
-	if row['action'] == 2.:
-		val = 1
-	else:
-		val = 0
-	return val
-
-def f3(row):
-	"""
-	helper function to format the thermal model dataframe
-	"""
-	if row['a'] > 0 and row['a']<=1.:
-		return 1
-	elif row['a']>1 and row['a']<=2.:
-		return 2
-	else:
-		return 0
-
-
 class DataManager:
 	"""
 	# Class that handles all the data fetching and some of the preprocess
@@ -70,7 +36,7 @@ class DataManager:
 		Pandas DataFrame
 		"""
 		#this only works for ciee, check how it should be writen properly:
-		hod = HodClient("ciee/hod", self.c)
+		hod = HodClient(self.cfg["Data_Manager"]["Hod_Client"], self.c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 		  ?sensor rdf:type brick:Occupancy_Sensor .
@@ -113,6 +79,38 @@ class DataManager:
 
 
 	def preprocess_therm(self):
+
+		def f1(row):
+			"""
+			helper function to format the thermal model dataframe
+			"""
+			if row['action'] == 1.:
+				val = 1
+			else:
+				val = 0
+			return val
+
+		# if state is 2 we are doing cooling
+		def f2(row):
+			"""
+			helper function to format the thermal model dataframe
+			"""
+			if row['action'] == 2.:
+				val = 1
+			else:
+				val = 0
+			return val
+
+		def f3(row):
+			"""
+			helper function to format the thermal model dataframe
+			"""
+			if row['a'] > 0 and row['a'] <= 1.:
+				return 1
+			elif row['a'] > 1 and row['a'] <= 2.:
+				return 2
+			else:
+				return 0
 
 		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
