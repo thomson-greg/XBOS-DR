@@ -114,6 +114,8 @@ class DataManager:
 
 	def preprocess_therm(self):
 
+
+		#TODO get this done automated.
 		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
@@ -131,6 +133,8 @@ class DataManager:
 		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
 
 		# thermal data preprocess starts here
+		# TODO should we really make assumptions ?
+
 		df = df.fillna(method='pad')
 		df['a'] = df.apply(f3, axis=1)
 		df['tin'] = df['tin'].replace(to_replace=0, method='pad')
@@ -138,6 +142,7 @@ class DataManager:
 		df.dropna()
 
 		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
+		print(df['change_of_action'])
 
 		listerino = []
 		for j in df.change_of_action.unique():
