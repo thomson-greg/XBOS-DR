@@ -7,6 +7,7 @@ from Advise import Advise
 
 from xbos import get_client
 from xbos.services.hod import HodClientHTTP
+from xbos.services.hod import HodClient
 from xbos.devices.thermostat import Thermostat
 
 # TODO only one zone at a time, making multizone comes soon
@@ -115,7 +116,7 @@ def hvac_control(cfg, tstats, normal_zones):
 
 	# try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
 	for z in normal_zones:
-			for i in range(10):
+			for i in range(cfg["Thermostat_Write_Tries"]):
 				try:
 					tstats[z].write(p)
 					break
@@ -146,7 +147,7 @@ if __name__ == '__main__':
 		client = get_client(agent=cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
 	else:
 		client = get_client()
-	hc = HodClientHTTP("http://ciee.cal-sdb.org")
+	hc = HodClient(cfg["Data_Manager"]["Hod_Client"], client)
 
 	q = """SELECT ?uri ?zone WHERE {
 		?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
@@ -156,7 +157,7 @@ if __name__ == '__main__':
 	"""
 
 	tstats = {}
-	for tstat in hc.do_query(q):
+	for tstat in hc.do_query(q)['Rows']:
 		print tstat
 		tstats[tstat["?zone"]] = Thermostat(client, tstat["?uri"])
 

@@ -80,7 +80,11 @@ class DataManager:
 
 	def preprocess_therm(self):
 
+<<<<<<< HEAD
+
 		#TODO get this done automated.
+||||||| merged common ancestors
+=======
 		def f1(row):
 			"""
 			helper function to format the thermal model dataframe
@@ -113,6 +117,7 @@ class DataManager:
 			else:
 				return 0
 
+>>>>>>> 379270578a22e43aab243ca8883a1edafaa67bc5
 		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
