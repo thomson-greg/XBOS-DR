@@ -1,23 +1,47 @@
-from xbos import get_client
-from xbos.services.pundat import DataClient, make_dataframe
-from xbos.services.hod import HodClient
-import datetime
 import pandas as pd
-import pytz
 from datetime import timedelta
 import numpy as np
 import math
+from scipy.spatial import distance
 
 def mins_in_day(timestamp):
+	"""
+	Helper function to calculate how many minutes a certain day has
+	"""
 	return timestamp.hour * 60 + timestamp.minute
 
 def hamming_distance(a, b):
-	return np.count_nonzero(a != b)
+	"""
+	Calculate the hamming distance
+	Parameters
+	----------
+	a : ndarray
+	b : ndarray
+	Returns
+	-------
+	ndarray
+	"""
+	return distance.hamming(a, b)
 
-# calculate and return the k most similar dates with today
 def find_similar_days(training_data, now, observation_length, k, method=hamming_distance):
+	"""
+	Calculate and return the k most similar dates with today
+
+	Parameters
+	----------
+	training_data : Occupancy Data
+	observation_length : Minutes added from previous date, mostly needed for early morning
+	k : # of most similar days
+	method : similarity method for sorting
+
+	Returns
+	-------
+	Indexes for the most similar days
+	"""
+
 	min_time = training_data.index[0] + timedelta(minutes=observation_length)
-	# Find moments in our dataset that have the same hour/minute and is_weekend() == weekend.
+
+	# Find moments in our dataset that have the same hour/minute
 
 	selector = ((training_data.index.minute == now.minute) &
 				(training_data.index.hour == now.hour) &
@@ -26,6 +50,7 @@ def find_similar_days(training_data, now, observation_length, k, method=hamming_
 	similar_moments = training_data[selector][:-1]
 	obs_td = timedelta(minutes=observation_length)
 
+	#calculate the similarity of each day in the dataset with today
 	similar_moments['Similarity'] = [
 		method(
 			training_data[(training_data.index >= now - obs_td) &
@@ -38,75 +63,30 @@ def find_similar_days(training_data, now, observation_length, k, method=hamming_
 	indexes = (similar_moments.sort_values('Similarity', ascending=True).head(k).index)
 	return indexes
 
-# predict the expected occupancy prediction_time ahead
 def predict(data, now, similar_moments, prediction_time, resample_time):
-
+	"""
+	Using the find_similar_days method, calculate the probability of occupancy
+	"""
+	# initialize the prediction list
 	prediction = np.zeros((int(math.ceil(prediction_time/resample_time)) + 1, len(data.columns)))
+	# calculate the probability of occupancu
 	for i in similar_moments:
 		prediction += float(1.0 / float(len(similar_moments))) * data[(data.index >= i) & (data.index <= i + timedelta(minutes=prediction_time))]
-
+	# add the known occupancy for the current time to the start of the list
 	prediction[0] = data[data.index == now]
-	time_index = pd.date_range(now, now+timedelta(minutes=prediction_time),freq='15T')
+
+	time_index = pd.date_range(now, now+timedelta(minutes=prediction_time), freq=str(resample_time)+'T')
 	return pd.DataFrame(data=prediction, index=time_index)
 
 
-
+# TODO find the right number of similar dates and days of data (days of data are in DataManager)
 class Occupancy:
-	def __init__(self, cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
+	def __init__(self, df, interval, hours, occ_obs_len_addition):
 
-		# query the server to get all the available occupancy sensors
-		zone_name = cfg['zone']
-
-		if  cfg['Server']:
-			c = get_client(agent = '172.17.0.1:28589', entity="thanos.ent")
-		else:
-			c = get_client()
-		archiver = DataClient(c)
-		hod = HodClient("ciee/hod",c)
-
-		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
-		  ?sensor rdf:type brick:Occupancy_Sensor .
-		  ?sensor bf:isLocatedIn/bf:isPartOf ?zone .
-		  ?sensor bf:uuid ?uuid .
-		  ?zone rdf:type brick:HVAC_Zone
-		};
-		"""
-
-		results = hod.do_query(occ_query)
-		uuids = [[x['?zone'],x['?uuid']] for x in results['Rows']]
-
-		temp_now = now
-
-		# select the sensors that are contained in the zone we are optimizing for
-		query_list = []
-		for i in uuids:
-			if i[0] == zone_name:
-				query_list.append(i[1])
-
-		start = '"' + (temp_now).strftime('%Y-%m-%d %H:%M:%S') + ' PST"'
-		end = '"' + (temp_now - timedelta(days=30)).strftime('%Y-%m-%d %H:%M:%S') + ' PST"'
-
-		dfs = make_dataframe(archiver.window_uuids(query_list, end, start, '15min', timeout=120))
-
-		for uid, df in dfs.items():
-			if 'mean' in df.columns:
-				df = df[['mean']]
-			df.columns = ['occ']
-			dfs[uid] = df.resample('15min').mean() 
-			
-		df = dfs.values()[0]
-		if len(dfs) > 1:
-			for newdf in dfs.values()[1:]:
-				df['occ'] += newdf['occ']
-		df['occ'] = 1*(df['occ']>0)
-
-		df.index = df.index.tz_localize(pytz.timezone("America/Los_Angeles"))
-
-		observation_length_addition = 4*60
-		k = 5
-		prediction_time = 4*60
-		resample_time = 15
-		#now = df.index[-prediction_time/resample_time]
+		observation_length_addition = occ_obs_len_addition*60 # minutes added from prev date
+		k = 5 # number of similar days, not in config - needs validation
+		prediction_time = hours*60 # # of hours ahead for prediction
+		resample_time = interval # interval length
 		now = df.index[-1]
 		
 		observation_length = mins_in_day(now) + observation_length_addition
@@ -114,4 +94,17 @@ class Occupancy:
 		self.predictions = predict(df, now, similar_moments, prediction_time, resample_time)
 		
 	def occ(self, now_time):
+		"""
+		Occupancy getter
+		"""
 		return self.predictions[0][now_time]
+
+if __name__ == '__main__':
+	import yaml
+	from DataManager import DataManager
+	with open("config_south.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg)
+	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4)
+	print occ.occ(0)
