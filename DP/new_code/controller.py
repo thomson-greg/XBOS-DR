@@ -30,21 +30,19 @@ def hvac_control(cfg, tstats, normal_zones):
 	except:
 		print "Could not document changes."
 
+
 	# choose the apropriate setpoints according to weekday and time
-	weekno = now.astimezone(tz=pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])).weekday()
-
-	if weekno<5:
+	try:
 		now_time = now.astimezone(tz=pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])).time()
-
-		if now_time >= datetime.time(18,0) or now_time < datetime.time(7,0):
-			heating_setpoint = 62.
-			cooling_setpoint = 85.
-		else:
-			heating_setpoint = 70.
-			cooling_setpoint = 76.
-	else:
-		heating_setpoint = 62.
-		cooling_setpoint = 85.
+		for setpoint in cfg["Advise"]["Setpoint"]:
+			if now_time >= datetime.time(int(setpoint[0].split(":")[0]), int(setpoint[0].split(":")[1])) and \
+				now_time < datetime.time(int(setpoint[1].split(":")[0]), int(setpoint[1].split(":")[1])):
+				heating_setpoint = setpoint[2]
+				cooling_setpoint = setpoint[3]
+				break
+	except:
+		"Problem with setting the setpoints."
+		return False
 
 	try:
 		Prep_Therm = dataManager.preprocess_therm()
@@ -63,7 +61,8 @@ def hvac_control(cfg, tstats, normal_zones):
 					 cfg["Advise"]["Cooling_Consumption"],
 					 cfg["Advise"]["Max_Actions"],
 					 cfg["Advise"]["Thermal_Precision"],
-					 cfg["Advise"]["Occupancy_Obs_Len_Addition"])
+					 cfg["Advise"]["Occupancy_Obs_Len_Addition"],
+					 cfg["Advise"]["Setpoint"])
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:
@@ -165,6 +164,9 @@ if __name__ == '__main__':
 
 	starttime=time.time()
 	while True:
+
+		with open(yaml_filename, 'r') as ymlfile:
+			cfg = yaml.load(ymlfile)
 
 		if not hvac_control(cfg, tstats, normal_zones):
 			print("Problem with MPC, entering normal schedule.")

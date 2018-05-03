@@ -4,8 +4,9 @@ from datetime import timedelta
 # TODO let the user provide custom schedule for setpoints and setpoints
 
 class Discomfort:
-	def __init__(self, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
-		
+	def __init__(self, setpoints, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
+
+		self.setpoints = setpoints
 		self.temp_now = now
 
 	def disc(self, t_in, occ, node_time, interval):
@@ -23,20 +24,15 @@ class Discomfort:
 
 		"""
 
-		# different setpoints for weekdays and weekends
-		weekno = self.temp_now.weekday()
-		if weekno<5:
-			now_time = (self.temp_now + timedelta(minutes=node_time)).time()
+		now_time = (self.temp_now + timedelta(minutes=node_time)).time()
+		for setpoint in self.setpoints:
 
-			if now_time >= datetime.time(18,0) or now_time < datetime.time(7,0):
-				heating_setpoint = 62.
-				cooling_setpoint = 85.
-			else:
-				heating_setpoint = 70.
-				cooling_setpoint = 76.
-		else:
-			heating_setpoint = 62.
-			cooling_setpoint = 85.
+			if now_time >= datetime.time(int(setpoint[0].split(":")[0]), int(setpoint[0].split(":")[1])) and \
+					now_time < datetime.time(int(setpoint[1].split(":")[0]), int(setpoint[1].split(":")[1])):
+
+				heating_setpoint = setpoint[2]
+				cooling_setpoint = setpoint[3]
+				break
 
 		# check which setpoint is the temperature closer to
 		if abs(heating_setpoint - t_in) < abs(cooling_setpoint - t_in):

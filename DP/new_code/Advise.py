@@ -184,13 +184,13 @@ class Advise:
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
 				 energy_cost_schedule, lamda, interval, predictions_hours, plot_bool,
 				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
-				 thermal_precision, occ_obs_len_addition):
+				 thermal_precision, occ_obs_len_addition, setpoints):
 
 		self.plot =plot_bool
 		self.current_time = current_time
 		
 		# initialize all models
-		disc = Discomfort(now=self.current_time)
+		disc = Discomfort(setpoints, now=self.current_time)
 		th = ThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
 						  max_actions=max_actions, thermal_precision=thermal_precision)
 		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition)
@@ -242,7 +242,8 @@ if __name__ == '__main__':
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 "winter_rates", 0.99995, 15, 1, True,
-				 87, 55, 0.075, 1.25, 400, 400., 4)
+				 87, 55, 0.075, 1.25, 400, 400., 4,
+				 [["00:00", "07:00", 62., 85.], ["07:00", "18:00", 70., 76.], ["18:00", "00:00", 62., 85.]])
 
 	print adv.advise()
 	
