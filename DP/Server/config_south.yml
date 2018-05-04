@@ -17,7 +17,8 @@ SimpleDR: False
 
 Interval_Length: 15  # in minutes
 
-Energy_rates: "winter_rates" # options are "server", "summer_rates", "winter_rates", "event_day_rates"
+Energy_rates: "PDP-Winter" # options are "server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter", "PDP-Summer", "PDP-Winter"
+Holiday: "False"
 
 Thermostat_Write_Tries: 10
 

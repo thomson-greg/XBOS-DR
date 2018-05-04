@@ -1,8 +1,6 @@
 import datetime, pytz
 from datetime import timedelta
 
-# TODO let the user provide custom schedule for setpoints and setpoints
-
 class Discomfort:
 	def __init__(self, setpoints, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
 

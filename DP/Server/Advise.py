@@ -182,7 +182,7 @@ class EVA:
 class Advise:
 	# the Advise class initializes all the Models and runs the shortest path algorithm
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
-				 energy_cost_schedule, lamda, interval, predictions_hours, plot_bool,
+				 prices, lamda, interval, predictions_hours, plot_bool,
 				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
 				 thermal_precision, occ_obs_len_addition, setpoints):
 
@@ -195,7 +195,7 @@ class Advise:
 						  max_actions=max_actions, thermal_precision=thermal_precision)
 		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition)
 		safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
-		energy = EnergyConsumption(energy_cost_schedule, interval, now=self.current_time,
+		energy = EnergyConsumption(prices, interval, now=self.current_time,
 								   heat=heating_cons, cool=cooling_cons)
 		
 		Zones_Starting_Temps = [thermal_data['t_next'][-1]]

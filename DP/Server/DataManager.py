@@ -22,6 +22,8 @@ class DataManager:
 		self.zone = cfg["Data_Manager"]["Zone"]
 		self.interval = cfg["Interval_Length"]
 		self.now = now
+		self.horizon = cfg["Advise"]["Hours"]
+		self.pricing_sceme = cfg["Energy_rates"]
 
 		if cfg["Data_Manager"]["Server"]:
 			self.c = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
@@ -139,7 +141,6 @@ class DataManager:
 		df.dropna()
 
 		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
-		print(df['change_of_action'])
 
 		listerino = []
 		for j in df.change_of_action.unique():
@@ -201,6 +202,32 @@ class DataManager:
 
 		return df['T_High'][-1], df['T_Low'][-1], df['T_Mode'][-1]
 
+	def prices(self):
+
+		with open("pricing.yml", 'r') as ymlfile:
+			price_array = yaml.load(ymlfile)[self.pricing_sceme]
+
+		if self.pricing_sceme == "server":
+			# not implemented yet, needs fixing from the archiver
+			# (always says 0, problem unless energy its free and noone informed me)
+			raise ValueError('SERVER MODE IS NOT YET IMPLEMENTED FOR ENERGY PRICING')
+		else:
+			now_time = self.now
+			pricing = []
+
+			while now_time <= self.now + timedelta(hours = self.horizon):
+				i = 0 if now_time.weekday() < 5 else 1
+				for j in price_array[i]:
+					if (now_time.time() >= datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])) and \
+							now_time.time() < datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1])) or \
+							(j[0]==j[1])):
+						pricing.append(j[2])
+						break
+
+				now_time += timedelta(minutes=self.interval)
+
+		return pricing
+
 
 if __name__ == '__main__':
 	import yaml
@@ -212,3 +239,4 @@ if __name__ == '__main__':
 	print dm.preprocess_therm()
 	print dm.preprocess_occ()
 	print dm.thermostat_setpoints()
+	print dm.prices()

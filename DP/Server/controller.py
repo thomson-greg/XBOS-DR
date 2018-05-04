@@ -50,7 +50,7 @@ def hvac_control(cfg, tstats, normal_zones):
 					 dataManager.preprocess_occ(),
 					 Prep_Therm,
 					 dataManager.weather_fetch(),
-					 cfg["Energy_rates"],
+					 dataManager.prices(),
 					 cfg["Advise"]["Lambda"],
 					 cfg["Interval_Length"],
 					 cfg["Advise"]["Hours"],
