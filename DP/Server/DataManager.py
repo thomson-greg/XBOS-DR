@@ -6,6 +6,8 @@ from xbos.services.hod import HodClient
 from datetime import timedelta
 from xbos.services import mdal
 import pandas as pd
+import yaml
+from copy import copy
 
 # TODO add energy data acquisition
 # TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
@@ -23,7 +25,6 @@ class DataManager:
 		self.interval = cfg["Interval_Length"]
 		self.now = now
 		self.horizon = cfg["Advise"]["Hours"]
-		self.pricing_sceme = cfg["Energy_rates"]
 
 		if cfg["Data_Manager"]["Server"]:
 			self.c = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
@@ -204,23 +205,29 @@ class DataManager:
 
 	def prices(self):
 
-		with open("pricing.yml", 'r') as ymlfile:
-			price_array = yaml.load(ymlfile)[self.pricing_sceme]
+		price_array = self.cfg["Pricing"][self.cfg["Pricing"]["Energy_Rates"]]
 
-		if self.pricing_sceme == "server":
+		def in_between(now, start, end):
+			if start < end:
+				return start <= now < end
+			elif end < start:
+				return start <= now or now < end
+			else:
+				return True
+
+		if self.cfg["Pricing"]["Energy_Rates"] == "Server":
 			# not implemented yet, needs fixing from the archiver
 			# (always says 0, problem unless energy its free and noone informed me)
 			raise ValueError('SERVER MODE IS NOT YET IMPLEMENTED FOR ENERGY PRICING')
 		else:
-			now_time = self.now
+			now_time = self.now.astimezone(tz=pytz.timezone(self.cfg["Data_Manager"]["Pytz_Timezone"]))
 			pricing = []
 
 			while now_time <= self.now + timedelta(hours = self.horizon):
 				i = 0 if now_time.weekday() < 5 else 1
 				for j in price_array[i]:
-					if (now_time.time() >= datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])) and \
-							now_time.time() < datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1])) or \
-							(j[0]==j[1])):
+					if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
 						pricing.append(j[2])
 						break
 
@@ -230,7 +237,7 @@ class DataManager:
 
 
 if __name__ == '__main__':
-	import yaml
+
 	with open("config_south.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
