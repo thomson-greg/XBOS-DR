@@ -243,7 +243,7 @@ if __name__ == '__main__':
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 dm.prices(), 0.99995, 15, 1, True,
 				 87, 55, 0.075, 1.25, 400, 400., 4,
-				 [["00:00", "07:00", 62., 85.], ["07:00", "18:00", 70., 76.], ["18:00", "00:00", 62., 85.]])
+				 dm.building_setpoints())
 
 	print adv.advise()
 	

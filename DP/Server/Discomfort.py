@@ -22,22 +22,8 @@ class Discomfort:
 
 		"""
 
-		def in_between(now, start, end):
-			if start < end:  # e.g., "07:00-23:00"
-				return start <= now < end
-			elif end < start:  # e.g., "23:00-07:00"
-				return start <= now or now < end
-			else:  # start == end
-				return True  # consider it 24 hour interval
-
-
-		now_time = (self.temp_now + timedelta(minutes=node_time)).time()
-		for setpoint in self.setpoints:
-			if in_between(now_time, datetime.time(int(setpoint[0].split(":")[0]), int(setpoint[0].split(":")[1])),
-						  datetime.time(int(setpoint[1].split(":")[0]), int(setpoint[1].split(":")[1]))):
-				heating_setpoint = setpoint[2]
-				cooling_setpoint = setpoint[3]
-				break
+		heating_setpoint = self.setpoints[node_time/interval][0]
+		cooling_setpoint = self.setpoints[node_time/interval][1]
 
 		# check which setpoint is the temperature closer to
 		if abs(heating_setpoint - t_in) < abs(cooling_setpoint - t_in):
@@ -51,5 +37,5 @@ class Discomfort:
 			return discomfort*occ*interval
 
 if __name__ == '__main__':
-	disc = Discomfort([["00:00", "07:00", 62., 85.], ["07:00", "18:00", 70., 76.], ["18:00", "00:00", 62., 85.]])
+	disc = Discomfort([[62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0], [62.0, 85.0]])
 	print disc.disc(60, 0.8, 0, 15)

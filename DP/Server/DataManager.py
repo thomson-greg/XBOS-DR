@@ -235,6 +235,32 @@ class DataManager:
 
 		return pricing
 
+	def building_setpoints(self):
+
+		setpoints_array = self.cfg["Advise"]["Setpoint"]
+		def in_between(now, start, end):
+			if start < end:
+				return start <= now < end
+			elif end < start:
+				return start <= now or now < end
+			else:
+				return True
+
+
+		now_time = self.now.astimezone(tz=pytz.timezone(self.cfg["Data_Manager"]["Pytz_Timezone"]))
+		setpoints = []
+
+		while now_time <= self.now + timedelta(hours=self.horizon):
+			i = 0 if now_time.weekday() < 5 else 1
+			for j in setpoints_array[i]:
+				if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+							  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+					setpoints.append([j[2], j[3]])
+					break
+
+			now_time += timedelta(minutes=self.interval)
+
+		return setpoints
 
 if __name__ == '__main__':
 
@@ -247,3 +273,4 @@ if __name__ == '__main__':
 	print dm.preprocess_occ()
 	print dm.thermostat_setpoints()
 	print dm.prices()
+	print dm.building_setpoints()

@@ -30,22 +30,9 @@ def hvac_control(cfg, tstats, normal_zones):
 	except:
 		print "Could not document changes."
 
-
-	# choose the apropriate setpoints according to weekday and time
-	try:
-		now_time = now.astimezone(tz=pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])).time()
-		for setpoint in cfg["Advise"]["Setpoint"]:
-			if now_time >= datetime.time(int(setpoint[0].split(":")[0]), int(setpoint[0].split(":")[1])) and \
-				now_time < datetime.time(int(setpoint[1].split(":")[0]), int(setpoint[1].split(":")[1])):
-				heating_setpoint = setpoint[2]
-				cooling_setpoint = setpoint[3]
-				break
-	except:
-		"Problem with setting the setpoints."
-		return False
-
 	try:
 		Prep_Therm = dataManager.preprocess_therm()
+		setpoints_array = dataManager.building_setpoints()
 		adv = Advise(now.astimezone(tz=pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])),
 					 dataManager.preprocess_occ(),
 					 Prep_Therm,
@@ -62,7 +49,7 @@ def hvac_control(cfg, tstats, normal_zones):
 					 cfg["Advise"]["Max_Actions"],
 					 cfg["Advise"]["Thermal_Precision"],
 					 cfg["Advise"]["Occupancy_Obs_Len_Addition"],
-					 cfg["Advise"]["Setpoint"])
+					 setpoints_array)
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:
@@ -70,6 +57,9 @@ def hvac_control(cfg, tstats, normal_zones):
 		print e
 		return False
 
+
+	heating_setpoint = setpoints_array[0][0]
+	cooling_setpoint = setpoints_array[0][1]
 	# action "0" is Do Nothing, action "1" is Cooling, action "2" is Heating
 	if action == "0":
 		p = {"override": True, "heating_setpoint": math.floor(temp-0.1)-1, "cooling_setpoint": math.ceil(temp+0.1)+1, "mode": 3}

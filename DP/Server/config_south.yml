@@ -11,7 +11,7 @@ Advise:
   Max_Actions: 400 #int
   Thermal_Precision: 400. #float
   Occupancy_Obs_Len_Addition: 4
-  Setpoint: [["00:00", "07:00", 62., 85.], ["07:00", "18:00", 70., 76.], ["18:00", "00:00", 62., 85.]]
+  Setpoint: [[["00:00", "07:00", 62., 85.], ["07:00", "18:00", 70., 76.], ["18:00", "00:00", 62., 85.]], [["00:00", "00:00", 62, 85]]]
 
 SimpleDR: False
 
@@ -38,7 +38,7 @@ Data_Manager:
       Temperature_Outside: '1c467b79-b314-3c1e-83e6-ea5e7048c37b'
 
 Pricing:
-  #First list is weekday, second list is weekend
+  #First sublist is weekday, second list is weekend
   Energy_Rates: "PDP-Winter" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter", "PDP-Summer", "PDP-Winter"
   Holiday: "False"
   NON-TOU-Summer: [[["00:00", "00:00", 0.25]], [["00:00", "00:00", 0.25]]]
