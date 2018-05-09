@@ -10,13 +10,14 @@ from xbos.devices.thermostat import Thermostat
 
 class NormalSchedule:
 
-	def __init__(self, cfg, zones, normal_zones, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+	def __init__(self, cfg, t_stat, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
 		self.simpleDr = cfg["SimpleDR"]
-		self.server = cfg["Data_Manager"]["Server"]
-		self.entity = cfg["Data_Manager"]["Entity_File"]
-		self.agent = cfg["Data_Manager"]["Agent_IP"]
-		self.now = now.astimezone(tz=pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"]))
+		self.server = cfg["Server"]
+		self.entity = cfg["Entity_File"]
+		self.agent = cfg["Agent_IP"]
+		self.tries = cfg["Thermostat_Write_Tries"]
+		self.now = now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))
 
 		# query server to get the available zones
 		if self.server:
@@ -32,43 +33,41 @@ class NormalSchedule:
 		};
 		"""
 
-		self.tstats = zones
-		self.normal_zones = normal_zones
+		self.tstat = t_stat
 
 
 	def workday(self):
 		p = {"override": True, "heating_setpoint": 70., "cooling_setpoint": 76., "mode": 3}
 		print "workday", datetime.datetime.now()
 
-		for z in self.normal_zones:
-			print z, p
+		print p
 
-			for i in range(10):
-				try:
-					self.tstats[z].write(p)
-					break
-				except:
-					if i == 9:
-						e = sys.exc_info()[0]
-						print e
-					continue
+		for i in range(self.tries):
+			try:
+				self.tstat.write(p)
+				break
+			except:
+				if i == self.tries-1:
+					e = sys.exc_info()[0]
+					print e
+				continue
 
 
 	def workday_inactive(self):
 		p = {"override": True, "heating_setpoint": 62., "cooling_setpoint": 85., "mode": 3}
 		print "workday inactive", datetime.datetime.now()
-		for z in self.normal_zones:
-			print z, p
 
-			for i in range(10):
-				try:
-					self.tstats[z].write(p)
-					break
-				except:
-					if i == 9:
-						e = sys.exc_info()[0]
-						print e
-					continue
+		print p
+
+		for i in range(self.tries):
+			try:
+				self.tstat.write(p)
+				break
+			except:
+				if i == self.tries-1:
+					e = sys.exc_info()[0]
+					print e
+				continue
 
 
 	# in case that the mpc doesnt work properly run this
@@ -103,30 +102,31 @@ class NormalSchedule:
 		else:
 			self.workday_inactive()
 
-if __name__ == '__main__':
 
-	with open("config_south.yml", 'r') as ymlfile:
-		cfg = yaml.load(ymlfile)
-
-	if cfg["Data_Manager"]["Server"]:
-		client = get_client(agent=cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
-	else:
-		client = get_client()
-	hc = HodClientHTTP("http://ciee.cal-sdb.org")
-
-	q = """SELECT ?uri ?zone WHERE {
-		?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
-		?tstat bf:uri ?uri .
-		?tstat bf:controls/bf:feeds ?zone .
-	};
-	"""
-
-	tstats = {}
-	for tstat in hc.do_query(q):
-		print tstat
-		tstats[tstat["?zone"]] = Thermostat(client, tstat["?uri"])
-
-	normal_zones = [cfg["Data_Manager"]["Zone"]]
-
-	ns = NormalSchedule(cfg, tstats, normal_zones)
-	ns.normal_schedule()
+# if __name__ == '__main__':
+#
+# 	with open("config_south.yml", 'r') as ymlfile:
+# 		cfg = yaml.load(ymlfile)
+#
+# 	if cfg["Data_Manager"]["Server"]:
+# 		client = get_client(agent=cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
+# 	else:
+# 		client = get_client()
+# 	hc = HodClientHTTP("http://ciee.cal-sdb.org")
+#
+# 	q = """SELECT ?uri ?zone WHERE {
+# 		?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
+# 		?tstat bf:uri ?uri .
+# 		?tstat bf:controls/bf:feeds ?zone .
+# 	};
+# 	"""
+#
+# 	tstats = {}
+# 	for tstat in hc.do_query(q):
+# 		print tstat
+# 		tstats[tstat["?zone"]] = Thermostat(client, tstat["?uri"])
+#
+# 	normal_zones = [cfg["Data_Manager"]["Zone"]]
+#
+# 	ns = NormalSchedule(cfg, tstats, normal_zones)
+# 	ns.normal_schedule()

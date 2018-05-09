@@ -1,0 +1,21 @@
+SimpleDR: False
+Interval_Length: 15  # in minutes
+Thermostat_Write_Tries: 10
+Pytz_Timezone: "America/Los_Angeles"
+Wunderground_Key: '147c8cec00fcd16d'
+Hod_Client: "ciee/hod"
+Entity_File: "fill_this.ent"
+Agent_IP: '1.3.3.7:1337'
+Wunderground_Place: 'KCABERKE67'
+Server : False
+
+Pricing:
+  #First sublist is weekday, second list is weekend
+  Energy_Rates: "PDP-Winter" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter", "PDP-Summer", "PDP-Winter"
+  Holiday: "False"
+  NON-TOU-Summer: [[["00:00", "00:00", 0.25]], [["00:00", "00:00", 0.25]]]
+  NON-TOU-Winter: [[["00:00", "00:00", 0.19]], [["00:00", "00:00", 0.19]]]
+  TOU-Summer: [[["00:00", "08:30", 0.21],["08:30", "12:00", 0.24],["12:00", "18:00", 0.26],["18:00", "21:30", 0.24],["21:30", "00:00", 0.21]], [["00:00","00:00",0.21]]]
+  TOU-Winter: [[["00:00", "08:30", 0.20],["08:30", "21:30", 0.22],["21:30", "00:00", 0.20]], [["00:00","00:00",0.20]]]
+  PDP-Summer: [[["00:00", "08:30", 0.21],["08:30", "12:00", 0.24],["12:00", "14:00", 0.26],["14:00", "18:00", 0.60],["18:00", "21:30", 0.24], ["21:30", "00:00", 0.21]], [["00:00","14:00",0.21],["14:00","18:00",0.60],["18:00","00:00",0.21]]]
+  PDP-Winter: [[["00:00", "08:30", 0.20],["08:30","14:00", 0.22],["14:00", "18:00", 0.60],["18:00", "21:30", 0.22],["21:30", "00:00", 0.20]], [["00:00","14:00",0.20],["14:00","18:00",0.60],["18:00","00:00",0.20]]]

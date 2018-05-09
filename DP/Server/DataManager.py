@@ -17,17 +17,18 @@ class DataManager:
 	"""
 	# Class that handles all the data fetching and some of the preprocess
 	"""
-	def __init__(self, cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+	def __init__(self, controller_cfg, advise_cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
-		self.cfg = cfg
-		self.pytz_timezone = cfg["Data_Manager"]["Pytz_Timezone"]
-		self.zone = cfg["Data_Manager"]["Zone"]
-		self.interval = cfg["Interval_Length"]
+		self.controller_cfg = controller_cfg
+		self.advise_cfg = advise_cfg
+		self.pytz_timezone = controller_cfg["Pytz_Timezone"]
+		self.zone = advise_cfg["Data_Manager"]["Zone"]
+		self.interval = controller_cfg["Interval_Length"]
 		self.now = now
-		self.horizon = cfg["Advise"]["Hours"]
+		self.horizon = advise_cfg["Advise"]["Hours"]
 
-		if cfg["Data_Manager"]["Server"]:
-			self.c = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
+		if controller_cfg["Server"]:
+			self.c = get_client(agent = controller_cfg["Agent_IP"], entity=controller_cfg["Entity_File"])
 		else:
 			self.c = get_client()
 
@@ -39,7 +40,7 @@ class DataManager:
 		Pandas DataFrame
 		"""
 		#this only works for ciee, check how it should be writen properly:
-		hod = HodClient(self.cfg["Data_Manager"]["Hod_Client"], self.c)
+		hod = HodClient(self.controller_cfg["Hod_Client"], self.c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 		  ?sensor rdf:type brick:Occupancy_Sensor .
@@ -116,9 +117,9 @@ class DataManager:
 			else:
 				return 0
 
-		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
-				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
-				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
+		uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
+				 self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
+				 self.advise_cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
 
 		# get the thermostat data
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
@@ -160,8 +161,8 @@ class DataManager:
 
 	def weather_fetch(self):
 
-		wunderground_key =  self.cfg["Data_Manager"]["Wunderground_Key"]
-		wunderground_place = self.cfg["Data_Manager"]["Wunderground_Place"]
+		wunderground_key =  self.controller_cfg["Wunderground_Key"]
+		wunderground_place = self.controller_cfg["Wunderground_Place"]
 
 		if not os.path.exists("weather.json"):
 			weather = requests.get("http://api.wunderground.com/api/"+ wunderground_key+ "/hourly/q/pws:"+ wunderground_place +".json")
@@ -186,9 +187,9 @@ class DataManager:
 
 	def thermostat_setpoints(self):
 
-		uuids = [self.cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
-				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
-				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
+		uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
+				 self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
+				 self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
 
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': uuids,
@@ -205,7 +206,7 @@ class DataManager:
 
 	def prices(self):
 
-		price_array = self.cfg["Pricing"][self.cfg["Pricing"]["Energy_Rates"]]
+		price_array = self.controller_cfg["Pricing"][self.controller_cfg["Pricing"]["Energy_Rates"]]
 
 		def in_between(now, start, end):
 			if start < end:
@@ -215,12 +216,12 @@ class DataManager:
 			else:
 				return True
 
-		if self.cfg["Pricing"]["Energy_Rates"] == "Server":
+		if self.controller_cfg["Pricing"]["Energy_Rates"] == "Server":
 			# not implemented yet, needs fixing from the archiver
 			# (always says 0, problem unless energy its free and noone informed me)
 			raise ValueError('SERVER MODE IS NOT YET IMPLEMENTED FOR ENERGY PRICING')
 		else:
-			now_time = self.now.astimezone(tz=pytz.timezone(self.cfg["Data_Manager"]["Pytz_Timezone"]))
+			now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
 			pricing = []
 
 			while now_time <= self.now + timedelta(hours = self.horizon):
@@ -237,7 +238,7 @@ class DataManager:
 
 	def building_setpoints(self):
 
-		setpoints_array = self.cfg["Advise"]["Setpoint"]
+		setpoints_array = self.advise_cfg["Advise"]["Setpoint"]
 		def in_between(now, start, end):
 			if start < end:
 				return start <= now < end
@@ -246,8 +247,7 @@ class DataManager:
 			else:
 				return True
 
-
-		now_time = self.now.astimezone(tz=pytz.timezone(self.cfg["Data_Manager"]["Pytz_Timezone"]))
+		now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
 		setpoints = []
 
 		while now_time <= self.now + timedelta(hours=self.horizon):
@@ -264,10 +264,13 @@ class DataManager:
 
 if __name__ == '__main__':
 
-	with open("config_south.yml", 'r') as ymlfile:
+	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg)
+	with open("ZoneConfigs/SouthZone.yml", 'r') as ymlfile:
+		advise_cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg, advise_cfg)
 	print dm.weather_fetch()
 	print dm.preprocess_therm()
 	print dm.preprocess_occ()
