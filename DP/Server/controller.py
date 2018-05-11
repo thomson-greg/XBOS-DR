@@ -93,15 +93,19 @@ class ZoneThread (threading.Thread):
 	def run(self):
 
 		try:
-			with open('ZoneConfigs/'+self.zone+'.yml', 'r') as ymlfile:
+			with open('ZoneConfigs/' + self.zone + '.yml', 'r') as ymlfile:
 				advise_cfg = yaml.load(ymlfile)
-
-			print advise_cfg
-			if not hvac_control(self.cfg, advise_cfg, self.tstat):
-				print("Problem with MPC, entering normal schedule.")
-				normal_schedule = NormalSchedule(cfg, tstat)
-				normal_schedule.normal_schedule()
 		except:
+			print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
+			return
+
+		count = 0
+		while not hvac_control(self.cfg, advise_cfg, self.tstat) and count < self.cfg["Thermostat_Write_Tries"]:
+			time.sleep(10)
+			count += 1
+
+		if count == self.cfg["Thermostat_Write_Tries"]:
+			print("Problem with MPC, entering normal schedule.")
 			normal_schedule = NormalSchedule(cfg, tstat)
 			normal_schedule.normal_schedule()
 
