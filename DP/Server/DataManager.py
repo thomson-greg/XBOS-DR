@@ -60,7 +60,7 @@ class DataManager:
 				query_list.append(i[1])
 
 		# get the sensor data
-		c = mdal.MDALClient("xbos/mdal")
+		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': query_list,
 						  'Selectors': [mdal.MAX] * len(query_list),
 						  'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
