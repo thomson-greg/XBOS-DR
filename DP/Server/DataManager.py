@@ -125,7 +125,7 @@ class DataManager:
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': '2017-12-21 00:00:00 UTC',
+						  'Time': {'T0': '2018-02-01 00:00:00 UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': '1min',
 								   'Aligned': True}})
@@ -224,12 +224,17 @@ class DataManager:
 			now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
 			pricing = []
 
+			DR_start_time = [int(self.controller_cfg["Pricing"]["DR_Start"].split(":")[0]),
+							 int(self.controller_cfg["Pricing"]["DR_Start"].split(":")[1])]
+			DR_finish_time = [int(self.controller_cfg["Pricing"]["DR_Finish"].split(":")[0]),
+							 int(self.controller_cfg["Pricing"]["DR_Finish"].split(":")[1])]
+
 			while now_time <= self.now + timedelta(hours = self.horizon):
 				i = 1 if now_time.weekday() >= 5 or self.controller_cfg["Pricing"]["Holiday"] else 0
 				for j in price_array[i]:
-					if in_between(now_time.time(), datetime.time(14, 0), datetime.time(15, 0)) and \
+					if in_between(now_time.time(), datetime.time(DR_start_time[0], DR_start_time[1]), datetime.time(DR_finish_time[0], DR_finish_time[1])) and \
 						(self.controller_cfg["Pricing"]["DR"] or now_time.weekday()==4):
-						pricing.append(0.858)
+						pricing.append(self.controller_cfg["Pricing"]["DR_Price"])
 					elif in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
 						pricing.append(j[2])
