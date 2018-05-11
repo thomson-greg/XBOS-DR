@@ -125,7 +125,7 @@ class DataManager:
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': '2017-07-21 00:00:00 UTC',
+						  'Time': {'T0': '2017-12-21 00:00:00 UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': '1min',
 								   'Aligned': True}})
