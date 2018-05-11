@@ -234,14 +234,17 @@ class Advise:
 
 if __name__ == '__main__':
 	from DataManager import DataManager
-	with open("config_south.yml", 'r') as ymlfile:
+	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg)
+	with open("ZoneConfigs/EastZone.yml", 'r') as ymlfile:
+		advise_cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg, advise_cfg)
 
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
-				 dm.prices(), 0.99995, 15, 1, True,
+				 dm.prices(), 0.995, 15, 1, True,
 				 87, 55, 0.075, 1.25, 400, 400., 4,
 				 dm.building_setpoints())
 

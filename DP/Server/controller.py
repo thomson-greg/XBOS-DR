@@ -1,17 +1,14 @@
-import datetime, time, math, pytz, os, sys, threading
+import datetime, time, math, pytz, sys, threading
 import pandas as pd
 import yaml
 from NormalSchedule import NormalSchedule
 from DataManager import DataManager
 from Advise import Advise
 from xbos import get_client
-from xbos.services.hod import HodClientHTTP
 from xbos.services.hod import HodClient
 from xbos.devices.thermostat import Thermostat
 
 # TODO only one zone at a time, making multizone comes soon
-
-filename = "thermostat_changes.txt"  # file in which the thermostat changes are recorded
 
 # the main controller
 def hvac_control(cfg, advise_cfg, tstat):
@@ -19,15 +16,6 @@ def hvac_control(cfg, advise_cfg, tstat):
 	now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
 
 	dataManager = DataManager(cfg, advise_cfg, now=now)
-
-	t_high, t_low, t_mode = dataManager.thermostat_setpoints()
-	# document the "before" state
-	try:
-		f = open(filename, 'a')
-		f.write("Did read: " + str(t_low) + ", " + str(t_high) + ", " + str(t_mode) + "\n")
-		f.close()
-	except:
-		print "Could not document changes."
 
 	try:
 		Prep_Therm = dataManager.preprocess_therm()
@@ -65,39 +53,16 @@ def hvac_control(cfg, advise_cfg, tstat):
 		print "Doing nothing"
 		print p
 
-		# document changes
-		try:
-			f = open(filename, 'a')
-			f.write("Did write: " + str(math.floor(temp-0.1)-1) + ", " + str(math.ceil(temp+0.1)+1) + ", " + str(3) +"\n")
-			f.close()
-		except:
-			print "Could not document changes."
-			
 	elif action == "1":
 		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": math.floor(temp-0.1), "mode": 3}
 		print "Heating"
 		print p
 
-		# document changes
-		try:
-			f = open(filename, 'a')
-			f.write("Did write: " + str(heating_setpoint) + ", " + str(math.floor(temp-0.1)) + ", " + str(3) + "\n")
-			f.close()
-		except:
-			print "Could not document changes."
-		
 	elif action == "2":
 		p = {"override": True, "heating_setpoint": math.ceil(temp+0.1), "cooling_setpoint": cooling_setpoint, "mode": 3}
 		print "Cooling"
 		print p
 
-		# document changes
-		try:
-			f = open(filename, 'a')
-			f.write("Did write: " + str(math.ceil(temp+0.1)) + ", " + str(cooling_setpoint) + ", " + str(3) + "\n")
-			f.close()
-		except:
-			print "Could not document changes."
 	else:
 		print "Problem with action."
 		return False
@@ -152,10 +117,6 @@ if __name__ == '__main__':
 
 		with open(yaml_filename, 'r') as ymlfile:
 			cfg = yaml.load(ymlfile)
-
-		if not os.path.exists(filename):
-			f = open(filename   , 'w')
-			f.close()
 
 		if cfg["Server"]:
 			client = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])

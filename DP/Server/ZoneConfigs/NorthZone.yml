@@ -12,12 +12,12 @@ Advise:
   Setpoint: [[["00:00", "07:00", 60., 85.], ["07:00", "18:00", 70., 74.], ["18:00", "00:00", 60., 85.]], [["00:00", "00:00", 60, 85]]]
 
 Data_Manager:
-  Zone: "SouthZone"
+  Zone: "NorthZone"
   UUIDS:
-      Thermostat_high: 'dbbf4a91-107a-3b15-b2c0-a49b54116daa'
-      Thermostat_low: 'eeadc8ed-6255-320d-b845-84f44748fe95'
-      Thermostat_mode: 'a4639323-1e57-3512-83fb-b01234378fd8'
-      Thermostat_temperature: '03099008-5224-3b61-b07e-eee445e64620'
-      Thermostat_state: 'dfb2b403-fd08-3e9b-bf3f-18c699ce40d6'
+      Thermostat_high: '9fa56ac1-0f8a-3ad2-86e8-72e816b875ad'
+      Thermostat_low: 'e4e0db0b-1c15-330e-a864-011e558f542e'
+      Thermostat_mode: 'c74200d0-0ee1-3951-a7f6-2bc8857cb303'
+      Thermostat_temperature: 'c7e33fa6-f683-36e9-b97a-7f096e4b57d4'
+      Thermostat_state: '5e55e5b1-007b-39fa-98b6-ae01baa6dccd'
       Energy_cost: '9dc5b5cd-8cb1-3dd3-b582-5ed6bf3f0083'
       Temperature_Outside: '1c467b79-b314-3c1e-83e6-ea5e7048c37b'

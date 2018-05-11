@@ -225,9 +225,12 @@ class DataManager:
 			pricing = []
 
 			while now_time <= self.now + timedelta(hours = self.horizon):
-				i = 0 if now_time.weekday() < 5 else 1
+				i = 1 if now_time.weekday() >= 5 or self.controller_cfg["Pricing"]["Holiday"] else 0
 				for j in price_array[i]:
-					if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+					if in_between(now_time.time(), datetime.time(14, 0), datetime.time(15, 0)) and \
+						(self.controller_cfg["Pricing"]["DR"] or now_time.weekday()==4):
+						pricing.append(0.858)
+					elif in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
 						pricing.append(j[2])
 						break
@@ -267,7 +270,7 @@ if __name__ == '__main__':
 	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("ZoneConfigs/SouthZone.yml", 'r') as ymlfile:
+	with open("ZoneConfigs/NorthZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	dm = DataManager(cfg, advise_cfg)

@@ -102,9 +102,12 @@ class Occupancy:
 if __name__ == '__main__':
 	import yaml
 	from DataManager import DataManager
-	with open("config_south.yml", 'r') as ymlfile:
+	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg)
+	with open("ZoneConfigs/EastZone.yml", 'r') as ymlfile:
+		advise_cfg = yaml.load(ymlfile)
+
+	dm = DataManager(cfg, advise_cfg)
 	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4)
-	print occ.occ(0)
+	print occ.occ(6)
