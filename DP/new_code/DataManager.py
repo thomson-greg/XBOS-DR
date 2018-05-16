@@ -20,13 +20,16 @@ class DataManager:
 		self.cfg = cfg
 		self.pytz_timezone = cfg["Data_Manager"]["Pytz_Timezone"]
 		self.zone = cfg["Data_Manager"]["Zone"]
+		self.building = cfg["Data_Manager"]["Building"]
 		self.interval = cfg["Interval_Length"]
 		self.now = now
 
 		if cfg["Data_Manager"]["Server"]:
-			self.c = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
+			self.client = get_client(agent = cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
 		else:
-			self.c = get_client()
+			self.client = get_client()
+
+		self.hod_client = HodClient("xbos/hod", self.client) #TODO hopefully i could incorporate this into the query.
 
 
 	def preprocess_occ(self):
@@ -36,7 +39,7 @@ class DataManager:
 		Pandas DataFrame
 		"""
 		#this only works for ciee, check how it should be writen properly:
-		hod = HodClient(self.cfg["Data_Manager"]["Hod_Client"], self.c)
+		hod = HodClient(self.cfg["Data_Manager"]["Hod_Client"], self.client)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 		  ?sensor rdf:type brick:Occupancy_Sensor .
@@ -79,6 +82,10 @@ class DataManager:
 
 
 	def preprocess_therm(self):
+		"""Get thermostat status and temperature and outside temperature and preprocess for thermal model.
+		:param start: (datetime) time to start.
+		:param end: (datetime) time to end.
+		:return (pd df) all relevant data."""
 
 		#TODO get this done automated.
 		def f1(row):
@@ -106,31 +113,98 @@ class DataManager:
 			"""
 			helper function to format the thermal model dataframe
 			"""
-			if row['a'] > 0 and row['a'] <= 1.:
+			if 0 < row['a'] <= 1:
 				return 1
-			elif row['a'] > 1 and row['a'] <= 2.:
+			elif 1 < row['a'] <=2:
 				return 2
 			else:
 				return 0
+
+
+		zone_query = """SELECT ?zone FROM %s WHERE {
+			?zone rdf:type brick:HVAC_Zone . 
+		};"""
+
+		# following queries are for the whole building.
+		thermostat_status_query = """SELECT ?controlled_zone ?status_uuid FROM %s WHERE { 
+		  ?tstat rdf:type brick:Thermostat .
+		  ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
+		  ?location_zone rdf:type brick:HVAC_Zone .
+		  ?tstat bf:controls ?RTU .
+		  ?RTU rdf:type brick:RTU . 
+		  ?RTU bf:feeds ?controlled_zone. 
+		  ?controlled_zone rdf:type brick:HVAC_Zone . 
+		  ?status_point bf:isPointOf ?tstat .
+		  ?status_point rdf:type brick:Thermostat_Status .
+		  ?status_point bf:uuid ?status_uuid.
+		};"""
+
+		thermostat_temperature_query = """SELECT ?controlled_zone ?temperature_uuid FROM %s WHERE { 
+		  ?tstat rdf:type brick:Thermostat .
+		  ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
+		  ?location_zone rdf:type brick:HVAC_Zone .
+		  ?tstat bf:controls ?RTU .
+		  ?RTU rdf:type brick:RTU . 
+		  ?RTU bf:feeds ?controlled_zone. 
+		  ?controlled_zone rdf:type brick:HVAC_Zone . 
+		  ?thermostat_point bf:isPointOf ?tstat .
+		  ?thermostat_point rdf:type brick:Temperature_Sensor .
+		  ?thermostat_point bf:uuid ?temperature_uuid.
+		};"""
+
+		outside_temperature_query = """SELECT ?weather_station ?weather_uuid FROM %s WHERE {
+			?weather_station rdf:type brick:Weather_Temperature_Sensor.
+			?weather_station bf:uuid ?weather_uuid.
+		};"""
+
+		query_data = {
+			"zones": self.hod_client.do_query(zone_query % self.building)["Rows"],
+			"tstat_temperature": self.hod_client.do_query(thermostat_temperature_query % self.building)["Rows"],
+			"tstat_action": self.hod_client.do_query(thermostat_status_query % self.building)["Rows"],
+			"outside_temperature": self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][0], # TODO for now taking the first weather station. Should be determined based on metadata.
+		}
+
+		c = mdal.MDALClient("xbos/mdal", client=self.client)
+		outside_temperature_data = c.do_query({
+						'Composition': query_data["outside_temperature"]["?weather_uuid"],
+						'Selectors': [mdal.MEAN]
+						,'Time': {'T0': '2017-07-21 00:00:00 UTC',
+								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+								   'WindowSize': '15min',
+								   'Aligned': True}})
+
+		print(outside_temperature_data)
+
+		zone_thermal_data = {}
+
+
+
+		for zone in query_data["zones"]:
+			print(query_data["outside_temperature"])
 
 		uuids = [self.cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
 				 self.cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
 
+
 		# get the thermostat data
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
+
 		dfs = c.do_query({'Composition': uuids,
-						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': '2017-07-21 00:00:00 UTC',
+						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN]
+						 , 'Time': {'T0': '2017-07-21 00:00:00 UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': '1min',
 								   'Aligned': True}})
 
+		print(dfs["df"].columns)
+
 		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+
+
 		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
 
 		# thermal data preprocess starts here
-		# TODO should we really make assumptions ?
+		# TODO should we really make assumptions for how to fill nan values ?
 
 		df = df.fillna(method='pad')
 		df['a'] = df.apply(f3, axis=1)
@@ -138,9 +212,11 @@ class DataManager:
 		df['t_out'] = df['t_out'].replace(to_replace=0, method='pad')
 		df.dropna()
 
-		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
-		print(df['change_of_action'])
+		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum() # given a row it's the number of times we have had an action change up till then. e.g. from nothing to heating.
+																			# This is accomplished by taking the difference of two consecutive rows and checking if their difference is 0 meaning that they had the same action.
 
+		# following adds the fields "time", "dt" etc such that we accumulate all values where we have consecutively the same action.
+		# maximally we group terms of total interval length 15
 		listerino = []
 		for j in df.change_of_action.unique():
 			for dfs in [df[df['change_of_action'] == j][i:i + self.interval] for i in
@@ -155,6 +231,9 @@ class DataManager:
 		df['a1'] = df.apply(f1, axis=1)
 		df['a2'] = df.apply(f2, axis=1)
 		return df.tz_localize(None)
+
+
+
 
 	def weather_fetch(self):
 
@@ -188,7 +267,7 @@ class DataManager:
 				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
 				 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
 
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
+		c = mdal.MDALClient("xbos/mdal", client=self.client)
 		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MEAN, mdal.MEAN],
 						  'Time': {'T0': (self.now - timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
@@ -208,7 +287,7 @@ if __name__ == '__main__':
 		cfg = yaml.load(ymlfile)
 
 	dm = DataManager(cfg)
-	print dm.weather_fetch()
+	# print dm.weather_fetch()
 	print dm.preprocess_therm()
-	print dm.preprocess_occ()
-	print dm.thermostat_setpoints()
+	# print dm.preprocess_occ()
+	# print dm.thermostat_setpoints()
