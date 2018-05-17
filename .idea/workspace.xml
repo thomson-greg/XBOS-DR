@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="3cd4977d-35f2-4e6f-a3e1-915a460e5d1c" name="Default" comment="">
+    <list default="true" id="3cd4977d-35f2-4e6f-a3e1-915a460e5d1c" name="Default" comment="Fixed pricing, added more config files, made minor changes.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/Advise.py" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/Advise.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DP/Server/DataManager.py" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/DataManager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DP/Server/config_file.yml" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/config_file.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/Occupancy.py" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/Occupancy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/ThermalModel.py" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/ThermalModel.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/ZoneConfigs/EastZone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/ZoneConfigs/EastZone.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/controller.py" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/controller.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/temp-plot.html" beforeDir="false" afterPath="$PROJECT_DIR$/DP/Server/temp-plot.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DP/Server/weather.json" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -17,13 +26,13 @@
     <SUITE FILE_PATH="coverage/XBOS_DR$Advise__1_.coverage" NAME="Advise (1) Coverage Results" MODIFIED="1525411660998" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
     <SUITE FILE_PATH="coverage/XBOS_DR$Discomfort.coverage" NAME="Discomfort Coverage Results" MODIFIED="1526004698740" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
     <SUITE FILE_PATH="coverage/XBOS_DR$EnergyConsumption.coverage" NAME="EnergyConsumption Coverage Results" MODIFIED="1526003365154" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
-    <SUITE FILE_PATH="coverage/XBOS_DR$Occupancy.coverage" NAME="Occupancy Coverage Results" MODIFIED="1526004834959" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
+    <SUITE FILE_PATH="coverage/XBOS_DR$Occupancy.coverage" NAME="Occupancy Coverage Results" MODIFIED="1526533541665" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
     <SUITE FILE_PATH="coverage/XBOS_DR$controller__1_.coverage" NAME="controller (1) Coverage Results" MODIFIED="1525411737491" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
-    <SUITE FILE_PATH="coverage/XBOS_DR$Advise.coverage" NAME="Advise Coverage Results" MODIFIED="1526003218816" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
+    <SUITE FILE_PATH="coverage/XBOS_DR$Advise.coverage" NAME="Advise Coverage Results" MODIFIED="1526533449067" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
     <SUITE FILE_PATH="coverage/XBOS_DR$NormalSchedule.coverage" NAME="NormalSchedule Coverage Results" MODIFIED="1522948711173" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/new_code" />
-    <SUITE FILE_PATH="coverage/XBOS_DR$DataManager.coverage" NAME="DataManager Coverage Results" MODIFIED="1526069058769" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
-    <SUITE FILE_PATH="coverage/XBOS_DR$ThermalModel.coverage" NAME="ThermalModel Coverage Results" MODIFIED="1525416233065" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
-    <SUITE FILE_PATH="coverage/XBOS_DR$controller.coverage" NAME="controller Coverage Results" MODIFIED="1526064043916" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
+    <SUITE FILE_PATH="coverage/XBOS_DR$DataManager.coverage" NAME="DataManager Coverage Results" MODIFIED="1526532084917" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
+    <SUITE FILE_PATH="coverage/XBOS_DR$controller.coverage" NAME="controller Coverage Results" MODIFIED="1526526648597" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
+    <SUITE FILE_PATH="coverage/XBOS_DR$ThermalModel.coverage" NAME="ThermalModel Coverage Results" MODIFIED="1526533903548" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/DP/Server" />
   </component>
   <component name="DatabaseView">
     <option name="SHOW_INTERMEDIATE" value="true" />
@@ -44,26 +53,73 @@
       <file leaf-file-name="controller.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/DP/Server/controller.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="730">
-              <caret line="145" column="20" lean-forward="true" selection-start-line="145" selection-start-column="20" selection-end-line="145" selection-end-column="20" />
+            <state relative-caret-position="442">
+              <caret line="152" selection-start-line="152" selection-end-line="152" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="DataManager.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="DataManager.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/DP/Server/DataManager.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="480">
-              <caret line="242" column="60" lean-forward="true" selection-start-line="242" selection-start-column="60" selection-end-line="242" selection-end-column="60" />
+            <state relative-caret-position="45">
+              <caret line="3" column="3" selection-start-line="3" selection-end-line="3" selection-end-column="27" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="CentralZone.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml">
+      <file leaf-file-name="Advise.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/DP/Server/Advise.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="225">
-              <caret line="15" column="8" lean-forward="true" selection-start-line="15" selection-start-column="8" selection-end-line="15" selection-end-column="8" />
+            <state relative-caret-position="418">
+              <caret line="252" column="49" selection-start-line="252" selection-start-column="49" selection-end-line="252" selection-end-column="49" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Discomfort.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/DP/Server/Discomfort.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="479">
+              <caret line="40" column="27" selection-start-line="40" selection-start-column="27" selection-end-line="40" selection-end-column="27" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="EnergyConsumption.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/DP/Server/EnergyConsumption.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="479">
+              <caret line="37" column="30" selection-start-line="37" selection-start-column="30" selection-end-line="37" selection-end-column="30" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="NormalSchedule.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/DP/Server/NormalSchedule.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-1487">
+              <folding>
+                <element signature="e#0#26#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Occupancy.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/DP/Server/Occupancy.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="418">
+              <caret line="115" column="24" lean-forward="true" selection-start-line="115" selection-start-column="24" selection-end-line="115" selection-end-column="24" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="ThermalModel.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/DP/Server/ThermalModel.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="493">
+              <caret line="94" lean-forward="true" selection-start-line="94" selection-end-line="94" />
             </state>
           </provider>
         </entry>
@@ -71,8 +127,8 @@
       <file leaf-file-name="config_file.yml" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/DP/Server/config_file.yml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="270">
-              <caret line="18" column="10" selection-start-line="18" selection-start-column="2" selection-end-line="18" selection-end-column="10" />
+            <state relative-caret-position="45">
+              <caret line="3" column="16" selection-start-line="3" selection-start-column="16" selection-end-line="3" selection-end-column="35" />
             </state>
           </provider>
         </entry>
@@ -123,16 +179,17 @@
         <option value="$PROJECT_DIR$/DP/Server/pricing.yml" />
         <option value="$PROJECT_DIR$/DP/Server/config_south.yml" />
         <option value="$PROJECT_DIR$/DP/Server/Discomfort.py" />
-        <option value="$PROJECT_DIR$/DP/Server/Advise.py" />
         <option value="$PROJECT_DIR$/DP/Server/EnergyConsumption.py" />
-        <option value="$PROJECT_DIR$/DP/Server/Occupancy.py" />
-        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml" />
-        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml" />
-        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/EastZone.yml" />
-        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml" />
-        <option value="$PROJECT_DIR$/DP/Server/controller.py" />
         <option value="$PROJECT_DIR$/DP/Server/config_file.yml" />
+        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml" />
+        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/EastZone.yml" />
+        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml" />
+        <option value="$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml" />
         <option value="$PROJECT_DIR$/DP/Server/DataManager.py" />
+        <option value="$PROJECT_DIR$/DP/Server/controller.py" />
+        <option value="$PROJECT_DIR$/DP/Server/Occupancy.py" />
+        <option value="$PROJECT_DIR$/DP/Server/ThermalModel.py" />
+        <option value="$PROJECT_DIR$/DP/Server/Advise.py" />
       </list>
     </option>
   </component>
@@ -190,7 +247,7 @@
     <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file:///Users/Daniel/CIEE/XBOS-DR/EnergyConsumption.py" />
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$/../Thermocat" />
-    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+    <property name="settings.editor.selected.configurable" value="project.propVCSSupport.Mappings" />
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
@@ -210,7 +267,26 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.DataManager">
+  <component name="RunManager" selected="Python.ThermalModel">
+    <configuration name="Advise" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="XBOS-DR" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DP/Server" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DP/Server/Advise.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
     <configuration name="DataManager" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="XBOS-DR" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -230,44 +306,6 @@
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
     </configuration>
-    <configuration name="Discomfort" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="XBOS-DR" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DP/Server" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DP/Server/Discomfort.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-    </configuration>
-    <configuration name="EnergyConsumption" type="PythonConfigurationType" factoryName="Python" temporary="true">
-      <module name="XBOS-DR" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DP/Server" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DP/Server/EnergyConsumption.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-    </configuration>
     <configuration name="Occupancy" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="XBOS-DR" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -282,6 +320,25 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DP/Server/Occupancy.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+    </configuration>
+    <configuration name="ThermalModel" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="XBOS-DR" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/DP/Server" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/DP/Server/ThermalModel.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -391,18 +448,18 @@
     <list>
       <item itemvalue="Python.main" />
       <item itemvalue="Python.DataManager" />
-      <item itemvalue="Python.EnergyConsumption" />
-      <item itemvalue="Python.Discomfort" />
       <item itemvalue="Python.Occupancy" />
       <item itemvalue="Python.controller" />
+      <item itemvalue="Python.Advise" />
+      <item itemvalue="Python.ThermalModel" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.ThermalModel" />
+        <item itemvalue="Python.Occupancy" />
+        <item itemvalue="Python.Advise" />
         <item itemvalue="Python.DataManager" />
         <item itemvalue="Python.controller" />
-        <item itemvalue="Python.Occupancy" />
-        <item itemvalue="Python.Discomfort" />
-        <item itemvalue="Python.EnergyConsumption" />
       </list>
     </recent_temporary>
   </component>
@@ -487,7 +544,14 @@
       <option name="project" value="LOCAL" />
       <updated>1526065343009</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="Fixed pricing, added more config files, made minor changes.">
+      <created>1526069148840</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1526069148840</updated>
+    </task>
+    <option name="localTasksCounter" value="12" />
     <servers />
   </component>
   <component name="TodoView">
@@ -506,13 +570,14 @@
       <window_info anchor="bottom" id="TODO" order="6" weight="0.32903227" />
       <window_info anchor="bottom" id="Event Log" order="7" sideWeight="0.5010672" side_tool="true" weight="0.32903227" />
       <window_info anchor="bottom" id="Database Changes" order="11" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Version Control" order="8" sideWeight="0.4994664" visible="true" weight="0.32580644" />
+      <window_info anchor="bottom" id="Version Control" order="8" sideWeight="0.4994664" weight="0.32580644" />
       <window_info anchor="bottom" id="Python Console" order="9" sideWeight="0.49893278" weight="0.32903227" />
-      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49893278" weight="0.31935483" />
+      <window_info anchor="bottom" id="Run" order="2" sideWeight="0.49893278" visible="true" weight="0.31935483" />
       <window_info anchor="bottom" id="Terminal" order="10" weight="0.32903227" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.20330843" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.20757738" />
       <window_info anchor="bottom" id="Docker" order="12" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="6" weight="0.32977587" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.32903227" />
       <window_info anchor="right" id="SciView" order="3" weight="0.32977587" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
@@ -525,7 +590,6 @@
       <window_info anchor="right" id="Data View" order="4" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.32903227" />
       <window_info anchor="right" id="Coverage" order="5" side_tool="true" />
     </layout>
     <layout-to-restore>
@@ -602,14 +666,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/DP/Server/config_file.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="19" column="118" lean-forward="true" selection-start-line="19" selection-start-column="118" selection-end-line="19" selection-end-column="118" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/controller.py" />
     <entry file="file://$PROJECT_DIR$/Occupation.py" />
     <entry file="file://$PROJECT_DIR$/LP/Linearize.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -695,87 +751,103 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/Discomfort.py">
+    <entry file="file://$PROJECT_DIR$/DP/Server/config_file.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="479">
-          <caret line="40" column="27" lean-forward="true" selection-start-line="40" selection-start-column="27" selection-end-line="40" selection-end-column="27" />
+        <state relative-caret-position="45">
+          <caret line="3" column="16" selection-start-line="3" selection-start-column="16" selection-end-line="3" selection-end-column="35" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/Advise.py">
+    <entry file="file://$PROJECT_DIR$/DP/Server/weather.json">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="268">
-          <caret line="236" column="5" selection-start-line="236" selection-start-column="4" selection-end-line="240" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/EnergyConsumption.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="555">
-          <caret line="37" column="30" selection-start-line="37" selection-start-column="30" selection-end-line="37" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/Occupancy.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="463">
-          <caret line="108" column="39" lean-forward="true" selection-start-line="108" selection-start-column="39" selection-end-line="108" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/ThermalModel.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="660">
-          <caret line="62" column="66" lean-forward="true" selection-start-line="62" selection-start-column="66" selection-end-line="62" selection-end-column="66" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="19" column="68" lean-forward="true" selection-start-line="19" selection-start-column="68" selection-end-line="19" selection-end-column="68" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="165">
-          <caret line="11" column="134" selection-start-line="11" selection-start-column="134" selection-end-line="11" selection-end-column="134" />
+        <state>
+          <caret column="156" lean-forward="true" selection-start-column="156" selection-end-column="156" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/EastZone.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="165">
-          <caret line="11" column="134" selection-start-line="11" selection-start-column="134" selection-end-line="11" selection-end-column="134" />
+          <caret line="11" column="70" selection-start-line="11" selection-start-column="70" selection-end-line="11" selection-end-column="70" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/controller.py">
+    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/NorthZone.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="730">
-          <caret line="145" column="20" lean-forward="true" selection-start-line="145" selection-start-column="20" selection-end-line="145" selection-end-column="20" />
+        <state relative-caret-position="165">
+          <caret line="11" column="70" selection-start-line="11" selection-start-column="70" selection-end-line="11" selection-end-column="70" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml">
+    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/SouthZone.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="225">
           <caret line="15" column="8" lean-forward="true" selection-start-line="15" selection-start-column="8" selection-end-line="15" selection-end-column="8" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/DP/Server/config_file.yml">
+    <entry file="file://$PROJECT_DIR$/DP/Server/ZoneConfigs/CentralZone.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="270">
-          <caret line="18" column="10" selection-start-line="18" selection-start-column="2" selection-end-line="18" selection-end-column="10" />
+        <state relative-caret-position="165">
+          <caret line="11" column="70" selection-start-line="11" selection-start-column="70" selection-end-line="11" selection-end-column="70" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/controller.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="442">
+          <caret line="152" selection-start-line="152" selection-end-line="152" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/DP/Server/DataManager.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="480">
-          <caret line="242" column="60" lean-forward="true" selection-start-line="242" selection-start-column="60" selection-end-line="242" selection-end-column="60" />
+        <state relative-caret-position="45">
+          <caret line="3" column="3" selection-start-line="3" selection-end-line="3" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/Discomfort.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="479">
+          <caret line="40" column="27" selection-start-line="40" selection-start-column="27" selection-end-line="40" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/EnergyConsumption.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="479">
+          <caret line="37" column="30" selection-start-line="37" selection-start-column="30" selection-end-line="37" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/NormalSchedule.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1487">
+          <folding>
+            <element signature="e#0#26#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/Occupancy.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="115" column="24" lean-forward="true" selection-start-line="115" selection-start-column="24" selection-end-line="115" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/ThermalModel.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="493">
+          <caret line="94" lean-forward="true" selection-start-line="94" selection-end-line="94" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/DP/Server/Advise.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="252" column="49" selection-start-line="252" selection-start-column="49" selection-end-line="252" selection-end-column="49" />
         </state>
       </provider>
     </entry>

@@ -102,12 +102,20 @@ class Occupancy:
 if __name__ == '__main__':
 	import yaml
 	from DataManager import DataManager
+	from xbos import get_client
+
 	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("ZoneConfigs/EastZone.yml", 'r') as ymlfile:
+	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg, advise_cfg)
+	if cfg["Server"]:
+		c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+	else:
+		c = get_client()
+
+	dm = DataManager(cfg, advise_cfg, c)
+	
 	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4)
 	print occ.occ(6)

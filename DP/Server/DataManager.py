@@ -17,7 +17,7 @@ class DataManager:
 	"""
 	# Class that handles all the data fetching and some of the preprocess
 	"""
-	def __init__(self, controller_cfg, advise_cfg, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+	def __init__(self, controller_cfg, advise_cfg, client, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
 		self.controller_cfg = controller_cfg
 		self.advise_cfg = advise_cfg
@@ -26,11 +26,7 @@ class DataManager:
 		self.interval = controller_cfg["Interval_Length"]
 		self.now = now
 		self.horizon = advise_cfg["Advise"]["Hours"]
-
-		if controller_cfg["Server"]:
-			self.c = get_client(agent = controller_cfg["Agent_IP"], entity=controller_cfg["Entity_File"])
-		else:
-			self.c = get_client()
+		self.c = client
 
 
 	def preprocess_occ(self):
@@ -39,7 +35,7 @@ class DataManager:
 		-------
 		Pandas DataFrame
 		"""
-		#this only works for ciee, check how it should be writen properly:
+
 		hod = HodClient(self.controller_cfg["Hod_Client"], self.c)
 
 		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
@@ -125,7 +121,7 @@ class DataManager:
 		c = mdal.MDALClient("xbos/mdal", client=self.c)
 		dfs = c.do_query({'Composition': uuids,
 						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': '2018-02-01 00:00:00 UTC',
+						  'Time': {'T0': (self.now - timedelta(days=100)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
 								   'WindowSize': '1min',
 								   'Aligned': True}})
@@ -171,8 +167,13 @@ class DataManager:
 				json.dump(data, f)
 
 		myweather = json.load(open("weather.json"))
-		if int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"]) < \
-			self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour:
+		json_day = int(myweather['hourly_forecast'][0]["FCTTIME"]["mday"])
+		json_month = int(myweather['hourly_forecast'][0]["FCTTIME"]["mon"])
+		json_year = int(myweather['hourly_forecast'][0]["FCTTIME"]["year"])
+		json_hour = int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"])
+		if (json_hour < self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour) or \
+			(datetime.datetime(json_year,json_month,json_day).replace(tzinfo=pytz.timezone(self.pytz_timezone)) <
+			 datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone(self.pytz_timezone))):
 			weather = requests.get("http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
 			data = weather.json()
 			with open('weather.json', 'w') as f:
@@ -278,7 +279,12 @@ if __name__ == '__main__':
 	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg, advise_cfg)
+	if cfg["Server"]:
+		c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+	else:
+		c = get_client()
+
+	dm = DataManager(cfg, advise_cfg, c)
 	print dm.weather_fetch()
 	print dm.preprocess_therm()
 	print dm.preprocess_occ()

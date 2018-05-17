@@ -76,10 +76,19 @@ class ThermalModel:
 if __name__ == '__main__':
 	import yaml
 	from DataManager import DataManager
+	from xbos import get_client
 
-	with open("config_south.yml", 'r') as ymlfile:
+	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	dm = DataManager(cfg)
+	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+		advise_cfg = yaml.load(ymlfile)
+
+	if cfg["Server"]:
+		c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+	else:
+		c = get_client()
+
+	dm = DataManager(cfg, advise_cfg, c)
 	tm = ThermalModel(dm.preprocess_therm(), dm.weather_fetch())
 	print tm.next_temperature(70, '2', 0)

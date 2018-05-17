@@ -11,13 +11,12 @@ from xbos.devices.thermostat import Thermostat
 # TODO only one zone at a time, making multizone comes soon
 
 # the main controller
-def hvac_control(cfg, advise_cfg, tstat):
+def hvac_control(cfg, advise_cfg, tstat, client):
 
 	now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
 
-	dataManager = DataManager(cfg, advise_cfg, now=now)
-
 	try:
+		dataManager = DataManager(cfg, advise_cfg, client, now=now)
 		Prep_Therm = dataManager.preprocess_therm()
 		setpoints_array = dataManager.building_setpoints()
 		adv = Advise(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
@@ -84,11 +83,12 @@ def hvac_control(cfg, advise_cfg, tstat):
 
 class ZoneThread (threading.Thread):
 
-	def __init__(self, cfg, tstat, zone):
+	def __init__(self, cfg, tstat, zone, client):
 		threading.Thread.__init__(self)
 		self.cfg = cfg
 		self.tstat = tstat
 		self.zone = zone
+		self.client = client
 
 	def run(self):
 
@@ -100,32 +100,38 @@ class ZoneThread (threading.Thread):
 			return
 
 		count = 0
-		while not hvac_control(self.cfg, advise_cfg, self.tstat) and count < self.cfg["Thermostat_Write_Tries"]:
+		while not hvac_control(self.cfg, advise_cfg, self.tstat, self.client) and count < self.cfg["Thermostat_Write_Tries"]:
 			time.sleep(10)
 			count += 1
+			if count == self.cfg["Thermostat_Write_Tries"]:
+				print("Problem with MPC, entering normal schedule.")
+				normal_schedule = NormalSchedule(cfg, tstat)
+				normal_schedule.normal_schedule()
+				break
 
-		if count == self.cfg["Thermostat_Write_Tries"]:
-			print("Problem with MPC, entering normal schedule.")
-			normal_schedule = NormalSchedule(cfg, tstat)
-			normal_schedule.normal_schedule()
 
 if __name__ == '__main__':
 
+	# read from config file
+	try:
+		yaml_filename = sys.argv[1]
+	except:
+		sys.exit("Please specify the configuration file as: python2 controller.py config_file.yaml")
+
+	with open(yaml_filename, 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	if cfg["Server"]:
+		client = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+	else:
+		client = get_client()
+
 	starttime = time.time()
 	while True:
-		# read from config file
-		try:
-			yaml_filename = sys.argv[1]
-		except:
-			sys.exit("Please specify the configuration file as: python2 controller.py config_file.yaml")
 
 		with open(yaml_filename, 'r') as ymlfile:
 			cfg = yaml.load(ymlfile)
 
-		if cfg["Server"]:
-			client = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
-		else:
-			client = get_client()
 		hc = HodClient(cfg["Hod_Client"], client)
 
 		q = """SELECT ?uri ?zone WHERE {
@@ -138,7 +144,7 @@ if __name__ == '__main__':
 		threads = []
 		for tstat in hc.do_query(q)['Rows']:
 			print tstat
-			thread = ZoneThread(cfg, Thermostat(client, tstat["?uri"]), tstat["?zone"])
+			thread = ZoneThread(cfg, Thermostat(client, tstat["?uri"]), tstat["?zone"], client)
 			thread.start()
 			threads.append(thread)
 
