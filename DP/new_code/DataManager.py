@@ -26,9 +26,11 @@ class DataManager:
         self.cfg = cfg
         self.pytz_timezone = pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])
         self.zone = cfg["Data_Manager"]["Zone"]
-        self.building = cfg["Data_Manager"]["Building"]
+        self.building = "ciee"
         self.interval = cfg["Interval_Length"]
         self.now = now
+
+        self.window_size = 1 # 1 min windosize for mdal.
 
         if cfg["Data_Manager"]["Server"]:
             self.client = get_client(agent=cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
@@ -150,7 +152,7 @@ class DataManager:
             'Selectors': [mdal.MEAN]
             , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
                        'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'WindowSize': '1min',
+                       'WindowSize': str(self.window_size) + 'min',
                        'Aligned': True}})
         outside_temperature_data = outside_temperature_data["df"] # since only data for one uuid
         outside_temperature_data.columns = ["t_out"]
@@ -163,7 +165,7 @@ class DataManager:
                               'Selectors': [mdal.MEAN, mdal.MAX]
                                  , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
                                            'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                                           'WindowSize': '1min',
+                                           'WindowSize': str(self.window_size) + 'min',
                                             'Aligned': True}})
             df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
@@ -248,7 +250,7 @@ class DataManager:
                         temp_data_dict = {'time': dfs.index[0],
                                           't_in': dfs['t_in'][0],
                                           't_next': dfs['t_in'][-1],
-                                          'dt': ((dfs.index[-1] - dfs.index[0]).seconds) / 60., # to get it in minutes.
+                                          'dt': dfs.shape[0] * self.window_size,
                                           't_out': dfs['t_out'].mean(), # mean does not count Nan values
                                           'action': dfs['a'][0]}
 
@@ -325,6 +327,17 @@ class DataManager:
 if __name__ == '__main__':
     import yaml
 
+    # from xbos.services.hod import HodClient
+    #
+    # hc = HodClient("xbos/hod")
+    #
+    # q2 = """
+    # SELECT * WHERE {
+    #     ?sites rdf:type brick:Site.
+    # };"""
+    # hd_res = hc.do_query(q2)
+    # print(hd_res)
+
     with open("config_south.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
@@ -333,7 +346,7 @@ if __name__ == '__main__':
     import pickle
     if True:
         start = datetime.datetime(year=2018, day=1, month=1)
-        end = datetime.datetime(year=2018, day=1, month=4)
+        end = datetime.datetime(year=2018, day=10, month=1)
 
         zone_file = open("zone_thermal", 'wb')
         z = dm.thermal_data(start, end)
@@ -341,12 +354,9 @@ if __name__ == '__main__':
         zone_file.close()
 
     if True:
-        start = datetime.datetime(year=2018, day=1, month=1)
-        end = datetime.datetime(year=2018, day=1, month=4)
 
         zone_file = open("zone_thermal", 'r')
         z = pickle.load(zone_file)
-        print(z)
         zone_file.close()
 
 
