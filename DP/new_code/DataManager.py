@@ -84,11 +84,11 @@ class DataManager:
 
         return df.tz_localize(None)
 
-    def _get_thermal_data(self):
+    def _get_thermal_data(self, start, end):
         """Get thermostat status and temperature and outside temperature for thermal model.
         :param start: (datetime) time to start.
         :param end: (datetime) time to end.
-        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]"""
+        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. Timerseries are the same for both with same freq."""
 
         # following queries are for the whole building.
         thermostat_status_query = """SELECT ?zone ?uuid FROM %s WHERE { 
@@ -141,12 +141,14 @@ class DataManager:
             0]  # TODO for now taking the first weather station. Should be determined based on metadata.
         c = mdal.MDALClient("xbos/mdal", client=self.client)
         outside_temperature_data = c.do_query({
-            'Composition': "1c467b79-b314-3c1e-83e6-ea5e7048c37b", # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
+            'Composition': ["1c467b79-b314-3c1e-83e6-ea5e7048c37b"], # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
             'Selectors': [mdal.MEAN]
-            , 'Time': {'T0': '2017-07-21 00:00:00 UTC',
-                       'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'WindowSize': '15min',
+            , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'WindowSize': '1min',
                        'Aligned': True}})
+        outside_temperature_data = outside_temperature_data["df"] # since only data for one uuid
+        outside_temperature_data.columns = ["t_out"]
 
         # get the data for the thermostats for each zone.
         zone_thermal_data = {}
@@ -154,18 +156,26 @@ class DataManager:
             # get the thermostat data
             dfs = c.do_query({'Composition': [dict["tstat_temperature"], dict["tstat_action"]],
                               'Selectors': [mdal.MEAN, mdal.MAX]
-                                 , 'Time': {'T0': '2018-04-21 00:00:00 UTC',
-                                            'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                                            'WindowSize': '1min',
+                                 , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                           'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                           'WindowSize': '1min',
                                             'Aligned': True}})
-
             df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
-            zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 'tin', dict["tstat_action"]: 'a'})
+
+            zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
 
         return zone_thermal_data, outside_temperature_data
 
 
     def preprocess_thermal_data(self, zone_data, outside_data):
+        """Preprocesses the data for the thermal model.
+        :param zone_data: dict{zone: pd.df columns["tin", "a"]}
+        :param outside_data: pd.df columns["tout"]. 
+        Note: Timerseries are the same for zone_data and outside_dataa with same freq. 
+        
+        :returns {zone: pd.df columns: t_in', 't_next', 'dt','t_out', 'action', 'a1', 'a2', [other mean zone temperatures]}
+                 where t_out and zone temperatures are the mean values over the intervals. 
+                 a1 is whether heating and a2 whether cooling."""
 
 
         # thermal data preprocess starts here
@@ -201,43 +211,50 @@ class DataManager:
             else:
                 return 0
 
-        all_temperatures = pd.concat([tstat_df["tin"] for tstat_df in zone_data.values()], axis=1)
+        all_temperatures = pd.concat([tstat_df["t_in"] for tstat_df in zone_data.values()], axis=1)
         all_temperatures.columns = ["temperature_" + zone for zone in zone_data.keys()]
-
         zone_thermal_model_data = {}
+
         for zone in zone_data.keys():
             actions = zone_data[zone]["a"]
-            thermal_model_data = pd.concat([all_temperatures, actions], axis=1)  # should be copied data
-            thermal_model_data = thermal_model_data.rename(columns={"temperature_" + zone: "tin"})
+            thermal_model_data = pd.concat([all_temperatures, actions, outside_data], axis=1)  # should be copied data
+            thermal_model_data = thermal_model_data.rename(columns={"temperature_" + zone: "t_in"})
+
+            thermal_model_data['a'] = thermal_model_data.apply(f3, axis=1)
+
+            # prepares final data type.
+            thermal_model_data['change_of_action'] = (thermal_model_data['a'].diff(1) != 0).astype(
+                'int').cumsum()  # given a row it's the number of times we have had an action change up till then. e.g. from nothing to heating.
+            # This is accomplished by taking the difference of two consecutive rows and checking if their difference is 0 meaning that they had the same action.
+
+            # following adds the fields "time", "dt" etc such that we accumulate all values where we have consecutively the same action.
+            # maximally we group terms of total interval length 15
+            data_list = []
+            for j in thermal_model_data.change_of_action.unique():
+                for i in range(0, thermal_model_data[thermal_model_data['change_of_action'] == j].shape[0], self.interval):
+                    for dfs in [thermal_model_data[thermal_model_data['change_of_action'] == j][i:i + self.interval]]:
+                        # we only look at intervals where the last and first value for T_in are not Nan.
+                        dfs.dropna(subset=["t_in"])
+                        zone_col_filter = ["temperature_" in col for col in dfs.columns]
+                        temp_data_dict = {'time': dfs.index[0],
+                                          't_in': dfs['t_in'][0],
+                                          't_next': dfs['t_in'][-1],
+                                          'dt': dfs.index[-1] - dfs.index[0],
+                                          't_out': dfs['t_out'].mean(), # mean does not count Nan values
+                                          'action': dfs['a'][0]}
+                        for zone in dfs.columns[zone_col_filter]:
+                            # mean does not count Nan values
+                            temp_data_dict[zone] = dfs[zone].mean()
+                        data_list.append(temp_data_dict)
 
 
 
-        df = df.fillna(method='pad')
-        df['a'] = df.apply(f3, axis=1)
-        df['tin'] = df['tin'].replace(to_replace=0, method='pad')
-        df['t_out'] = df['t_out'].replace(to_replace=0, method='pad')
-        df.dropna()
-
-        df['change_of_action'] = (df['a'].diff(1) != 0).astype(
-            'int').cumsum()  # given a row it's the number of times we have had an action change up till then. e.g. from nothing to heating.
-        # This is accomplished by taking the difference of two consecutive rows and checking if their difference is 0 meaning that they had the same action.
-
-        # following adds the fields "time", "dt" etc such that we accumulate all values where we have consecutively the same action.
-        # maximally we group terms of total interval length 15
-        listerino = []
-        for j in df.change_of_action.unique():
-            for i in range(0, df[df['change_of_action'] == j].shape[0], self.interval):
-                for dfs in [df[df['change_of_action'] == j][i:i + self.interval]]:
-                    listerino.append({'time': dfs.index[0],
-                                      'tin': dfs['tin'][0],
-                                      't_next': dfs['tin'][-1],
-                                      'dt': dfs.shape[0],
-                                      'tout': dfs['t_out'][0],
-                                      'action': dfs['a'][0]})
-        df = pd.DataFrame(listerino).set_index('time')
-        df['a1'] = df.apply(f1, axis=1)
-        df['a2'] = df.apply(f2, axis=1)
-        return df.tz_localize(None)
+            thermal_model_data = pd.DataFrame(data_list).set_index('time')
+            thermal_model_data['a1'] = thermal_model_data.apply(f1, axis=1)
+            thermal_model_data['a2'] = thermal_model_data.apply(f2, axis=1)
+            thermal_model_data = thermal_model_data.dropna() # final drop. Mostly if the whole interval for the zones or t_out were nan.
+            zone_thermal_model_data[zone] = thermal_model_data.tz_localize(None)
+        return zone_thermal_model_data
 
     def weather_fetch(self):
 
@@ -296,14 +313,27 @@ if __name__ == '__main__':
     dm = DataManager(cfg)
     # print dm.weather_fetch()
     import pickle
+    if False:
+        start = datetime.datetime(year=2018, day=10, month=1)
+        end = datetime.datetime(year=2018, day=20, month=1)
 
-    zone_file = open("zone_thermal", 'r')
-    outside_file = open("outside_temperature", 'r')
+        zone_file = open("zone_thermal", 'wb')
+        outside_file = open("outside_temperature", 'wb')
+        z, o = dm._get_thermal_data(start, end)
+        pickle.dump(z, zone_file)
+        pickle.dump(o, outside_file)
+        zone_file.close()
+        outside_file.close()
 
-    z, o = pickle.load(zone_file), pickle.load(outside_file)
-    zone_file.close()
-    outside_file.close()
+    if True:
 
-    dm.preprocess_thermal_data(z, o)
+        zone_file = open("zone_thermal", 'r')
+        outside_file = open("outside_temperature", 'r')
+
+        z, o = pickle.load(zone_file), pickle.load(outside_file)
+        zone_file.close()
+        outside_file.close()
+
+        print(dm.preprocess_thermal_data(z, o))
 # print dm.preprocess_occ()
 # print dm.thermostat_setpoints()
