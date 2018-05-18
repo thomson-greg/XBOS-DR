@@ -21,12 +21,12 @@ class DataManager:
     # Class that handles all the data fetching and some of the preprocess
     """
 
-    def __init__(self, cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+    def __init__(self, building, cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
         self.cfg = cfg
         self.pytz_timezone = pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])
         self.zone = cfg["Data_Manager"]["Zone"]
-        self.building = "ciee"
+        self.building = building
         self.interval = cfg["Interval_Length"]
         self.now = now
 
@@ -170,6 +170,7 @@ class DataManager:
             df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
             zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
+
 
         # TODO Note: The timezone for the data relies to be converted by MDAL to the local timezone.
         return zone_thermal_data, outside_temperature_data
@@ -327,38 +328,42 @@ class DataManager:
 if __name__ == '__main__':
     import yaml
 
-    # from xbos.services.hod import HodClient
-    #
-    # hc = HodClient("xbos/hod")
-    #
-    # q2 = """
-    # SELECT * WHERE {
-    #     ?sites rdf:type brick:Site.
-    # };"""
-    # hd_res = hc.do_query(q2)
-    # print(hd_res)
+    from xbos.services.hod import HodClient
+
+    hc = HodClient("xbos/hod")
+
+    q2 = """
+    SELECT * WHERE {
+        ?sites rdf:type brick:Site.
+    };"""
+    hd_res = hc.do_query(q2)["Rows"]
 
     with open("config_south.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
-    dm = DataManager(cfg)
+    dm = DataManager("ciee", cfg)
     # print dm.weather_fetch()
     import pickle
     if True:
         start = datetime.datetime(year=2018, day=1, month=1)
-        end = datetime.datetime(year=2018, day=10, month=1)
+        end = datetime.datetime(year=2018, day=1, month=3)
 
-        zone_file = open("zone_thermal", 'wb')
-        z = dm.thermal_data(start, end)
-        pickle.dump(z, zone_file)
-        zone_file.close()
+        for b in hd_res[7:]:
+            bldg = b["?sites"]
+            print(bldg)
 
-    if True:
+            dm.building = bldg
+            z = dm.thermal_data(start, end)
+            zone_file = open("zone_thermal_" + dm.building, 'wb')
+            pickle.dump(z, zone_file)
+            zone_file.close()
 
-        zone_file = open("zone_thermal", 'r')
-        z = pickle.load(zone_file)
-        zone_file.close()
+    print(["zone_thermal_" + bldg for bldg in hd_res])
+    
+
 
 
 # print dm.preprocess_occ()
 # print dm.thermostat_setpoints()
+
+#rsf fails.
