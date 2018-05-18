@@ -168,7 +168,6 @@ class DataManager:
             df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
             zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
-            print(zone_thermal_data[zone].shape)
 
         # TODO Note: The timezone for the data relies to be converted by MDAL to the local timezone.
         return zone_thermal_data, outside_temperature_data
@@ -336,10 +335,10 @@ if __name__ == '__main__':
         start = datetime.datetime(year=2018, day=1, month=1)
         end = datetime.datetime(year=2018, day=1, month=4)
 
-        # zone_file = open("zone_thermal", 'wb')
+        zone_file = open("zone_thermal", 'wb')
         z = dm.thermal_data(start, end)
-        # pickle.dump(z, zone_file)
-        # zone_file.close()
+        pickle.dump(z, zone_file)
+        zone_file.close()
 
     if True:
         start = datetime.datetime(year=2018, day=1, month=1)
