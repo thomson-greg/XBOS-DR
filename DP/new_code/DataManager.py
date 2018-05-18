@@ -5,6 +5,7 @@ import pytz
 from datetime import timedelta
 
 import pandas as pd
+import numpy as np
 import requests
 from xbos import get_client
 from xbos.services import mdal
@@ -23,7 +24,7 @@ class DataManager:
     def __init__(self, cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
         self.cfg = cfg
-        self.pytz_timezone = cfg["Data_Manager"]["Pytz_Timezone"]
+        self.pytz_timezone = pytz.timezone(cfg["Data_Manager"]["Pytz_Timezone"])
         self.zone = cfg["Data_Manager"]["Zone"]
         self.building = cfg["Data_Manager"]["Building"]
         self.interval = cfg["Interval_Length"]
@@ -86,9 +87,13 @@ class DataManager:
 
     def _get_thermal_data(self, start, end):
         """Get thermostat status and temperature and outside temperature for thermal model.
-        :param start: (datetime) time to start.
-        :param end: (datetime) time to end.
+        :param start: (datetime) time to start. relative to datamanager instance timezone.
+        :param end: (datetime) time to end. relative to datamanager instance timezone.
         :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. Timerseries are the same for both with same freq."""
+
+        #Converting start and end from datamanger timezone to UTC timezone.
+        start = self.pytz_timezone.localize(start).astimezone(pytz.timezone("UTC"))
+        end = self.pytz_timezone.localize(end).astimezone(pytz.timezone("UTC"))
 
         # following queries are for the whole building.
         thermostat_status_query = """SELECT ?zone ?uuid FROM %s WHERE { 
@@ -163,11 +168,13 @@ class DataManager:
             df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
             zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
+            print(zone_thermal_data[zone].shape)
 
+        # TODO Note: The timezone for the data relies to be converted by MDAL to the local timezone.
         return zone_thermal_data, outside_temperature_data
 
 
-    def preprocess_thermal_data(self, zone_data, outside_data):
+    def _preprocess_thermal_data(self, zone_data, outside_data):
         """Preprocesses the data for the thermal model.
         :param zone_data: dict{zone: pd.df columns["tin", "a"]}
         :param outside_data: pd.df columns["tout"]. 
@@ -208,6 +215,8 @@ class DataManager:
                 return 1
             elif 1 < row['a'] <= 2:
                 return 2
+            elif np.isnan(row['a']):
+                return row['a']
             else:
                 return 0
 
@@ -217,8 +226,9 @@ class DataManager:
 
         for zone in zone_data.keys():
             actions = zone_data[zone]["a"]
-            thermal_model_data = pd.concat([all_temperatures, actions, outside_data], axis=1)  # should be copied data
+            thermal_model_data = pd.concat([all_temperatures, actions, outside_data], axis=1)  # should be copied data according to documentation
             thermal_model_data = thermal_model_data.rename(columns={"temperature_" + zone: "t_in"})
+
 
             thermal_model_data['a'] = thermal_model_data.apply(f3, axis=1)
 
@@ -228,7 +238,7 @@ class DataManager:
             # This is accomplished by taking the difference of two consecutive rows and checking if their difference is 0 meaning that they had the same action.
 
             # following adds the fields "time", "dt" etc such that we accumulate all values where we have consecutively the same action.
-            # maximally we group terms of total interval length 15
+            # maximally we group terms of total self.interval
             data_list = []
             for j in thermal_model_data.change_of_action.unique():
                 for i in range(0, thermal_model_data[thermal_model_data['change_of_action'] == j].shape[0], self.interval):
@@ -239,12 +249,13 @@ class DataManager:
                         temp_data_dict = {'time': dfs.index[0],
                                           't_in': dfs['t_in'][0],
                                           't_next': dfs['t_in'][-1],
-                                          'dt': dfs.index[-1] - dfs.index[0],
+                                          'dt': ((dfs.index[-1] - dfs.index[0]).seconds) / 60., # to get it in minutes.
                                           't_out': dfs['t_out'].mean(), # mean does not count Nan values
                                           'action': dfs['a'][0]}
-                        for zone in dfs.columns[zone_col_filter]:
+
+                        for temperature_zone in dfs.columns[zone_col_filter]:
                             # mean does not count Nan values
-                            temp_data_dict[zone] = dfs[zone].mean()
+                            temp_data_dict[temperature_zone] = dfs[temperature_zone].mean()
                         data_list.append(temp_data_dict)
 
 
@@ -252,9 +263,17 @@ class DataManager:
             thermal_model_data = pd.DataFrame(data_list).set_index('time')
             thermal_model_data['a1'] = thermal_model_data.apply(f1, axis=1)
             thermal_model_data['a2'] = thermal_model_data.apply(f2, axis=1)
+
             thermal_model_data = thermal_model_data.dropna() # final drop. Mostly if the whole interval for the zones or t_out were nan.
-            zone_thermal_model_data[zone] = thermal_model_data.tz_localize(None)
+
+            zone_thermal_model_data[zone] = thermal_model_data
+
+            print('one loop done')
         return zone_thermal_model_data
+
+    def thermal_data(self, start, end):
+        z, o = self._get_thermal_data(start, end)
+        return self._preprocess_thermal_data(z, o)
 
     def weather_fetch(self):
 
@@ -270,7 +289,7 @@ class DataManager:
 
         myweather = json.load(open("weather.json"))
         if int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"]) < \
-                self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour:
+                self.now.astimezone(tz=self.pytz_timezone).hour:
             weather = requests.get(
                 "http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
             data = weather.json()
@@ -313,27 +332,24 @@ if __name__ == '__main__':
     dm = DataManager(cfg)
     # print dm.weather_fetch()
     import pickle
-    if False:
-        start = datetime.datetime(year=2018, day=10, month=1)
-        end = datetime.datetime(year=2018, day=20, month=1)
+    if True:
+        start = datetime.datetime(year=2018, day=1, month=1)
+        end = datetime.datetime(year=2018, day=1, month=4)
 
-        zone_file = open("zone_thermal", 'wb')
-        outside_file = open("outside_temperature", 'wb')
-        z, o = dm._get_thermal_data(start, end)
-        pickle.dump(z, zone_file)
-        pickle.dump(o, outside_file)
-        zone_file.close()
-        outside_file.close()
+        # zone_file = open("zone_thermal", 'wb')
+        z = dm.thermal_data(start, end)
+        # pickle.dump(z, zone_file)
+        # zone_file.close()
 
     if True:
+        start = datetime.datetime(year=2018, day=1, month=1)
+        end = datetime.datetime(year=2018, day=1, month=4)
 
         zone_file = open("zone_thermal", 'r')
-        outside_file = open("outside_temperature", 'r')
-
-        z, o = pickle.load(zone_file), pickle.load(outside_file)
+        z = pickle.load(zone_file)
+        print(z)
         zone_file.close()
-        outside_file.close()
 
-        print(dm.preprocess_thermal_data(z, o))
+
 # print dm.preprocess_occ()
 # print dm.thermostat_setpoints()
