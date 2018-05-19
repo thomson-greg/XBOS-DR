@@ -233,12 +233,14 @@ class Advise:
 		return action
 
 if __name__ == '__main__':
-	from DP.Server.DataManager import DataManager
+	import sys
+	sys.path.insert(0, '..')
+	from DataManager import DataManager
 	from xbos import get_client
-	with open("config_file.yml", 'r') as ymlfile:
+	with open("../config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("../ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
