@@ -248,7 +248,7 @@ if __name__ == '__main__':
 
 	dm = DataManager(cfg, advise_cfg, c)
 
-	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles")),
+	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 dm.prices(), 0.995, 15, 1, False,
 				 87, 55, 0.075, 1.25, 400, 400., 4,

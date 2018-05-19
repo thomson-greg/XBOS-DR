@@ -77,8 +77,9 @@ if cfg["Server"]:
 else:
 	c = get_client()
 
-startime =datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"])).astimezone(tz=pytz.timezone("UTC"))
-endtime = datetime.datetime.strptime(cfg["End_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"])).astimezone(tz=pytz.timezone("UTC"))
+uspac = pytz.timezone(cfg["Pytz_Timezone"])
+startime = uspac.localize(datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S')).astimezone(tz=pytz.utc)
+endtime = uspac.localize(datetime.datetime.strptime(cfg["End_Date"], '%Y-%m-%d %H:%M:%S')).astimezone(tz=pytz.utc)
 
 for i in cfg["Zones"]:
 	df = preprocess_data(UUIDS[i], c, startime, endtime)

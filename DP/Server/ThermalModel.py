@@ -59,11 +59,11 @@ class ThermalModel:
 		"""
 		# Method that returns the predicted temperature of the building after interval_length minutes
 		"""
-		if action == 'Heating' or action == '2':
+		if action == 'Heating' or action == '1':
 			return round(func([Tin, 1, 0, self.weather_predictions[(self.current_time + timedelta(self.interval_length*time)).hour],
 							   self.interval_length],
 							  *self.popt) * self.thermal_precision) / self.thermal_precision
-		elif action == 'Cooling' or action == '1':
+		elif action == 'Cooling' or action == '2':
 			return round(func([Tin, 0, 1, self.weather_predictions[(self.current_time + timedelta(self.interval_length*time)).hour],
 							   self.interval_length],
 							  *self.popt) * self.thermal_precision) / self.thermal_precision
@@ -91,4 +91,4 @@ if __name__ == '__main__':
 
 	dm = DataManager(cfg, advise_cfg, c)
 	tm = ThermalModel(dm.preprocess_therm(), dm.weather_fetch())
-	print tm.next_temperature(70, '2', 0)
+	print tm.next_temperature(70, '1', 0)
