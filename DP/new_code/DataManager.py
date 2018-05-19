@@ -251,7 +251,7 @@ class DataManager:
                         temp_data_dict = {'time': dfs.index[0],
                                           't_in': dfs['t_in'][0],
                                           't_next': dfs['t_in'][-1],
-                                          'dt': dfs.shape[0] * self.window_size,
+                                          'dt': (dfs.index[-1] - dfs.index[0]).seconds/60 + self.window_size, # need to add windowsize for last timestep.
                                           't_out': dfs['t_out'].mean(), # mean does not count Nan values
                                           'action': dfs['a'][0]}
 
@@ -347,19 +347,22 @@ if __name__ == '__main__':
     if True:
         start = datetime.datetime(year=2018, day=1, month=1)
         end = datetime.datetime(year=2018, day=1, month=3)
+        if False:
+            for b in hd_res[7:]:
+                bldg = b["?sites"]
+                print(bldg)
 
-        for b in hd_res[7:]:
-            bldg = b["?sites"]
-            print(bldg)
-
-            dm.building = bldg
+                dm.building = bldg
+                z = dm.thermal_data(start, end)
+                zone_file = open("zone_thermal_" + dm.building, 'wb')
+                pickle.dump(z, zone_file)
+                zone_file.close()
+        else:
             z = dm.thermal_data(start, end)
-            zone_file = open("zone_thermal_" + dm.building, 'wb')
-            pickle.dump(z, zone_file)
-            zone_file.close()
+            print(min(z.values()[0]["dt"]))
 
     print(["zone_thermal_" + bldg for bldg in hd_res])
-    
+
 
 
 
