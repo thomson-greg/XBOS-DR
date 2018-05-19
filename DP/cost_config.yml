@@ -1,7 +1,8 @@
 Pytz_Timezone: "America/Los_Angeles"
 Server : False
-Start_Date : "2018-5-1 00:00:00"
-End_Date : "2017-5-19 12:00:00"
+Start_Date : "2018-5-11 00:00:00"
+End_Date : "2018-5-12 00:00:00"
+Zones : ["SouthZone", "NorthZone", "CentralZone", "EastZone"]
 
 Pricing:
   #First sublist is weekday, second list is weekend

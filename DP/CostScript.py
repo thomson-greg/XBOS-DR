@@ -4,6 +4,10 @@ from xbos.services import mdal
 import pandas as pd
 import yaml
 
+
+UUIDS = {"SouthZone":"dfb2b403-fd08-3e9b-bf3f-18c699ce40d6", "NorthZone":"5e55e5b1-007b-39fa-98b6-ae01baa6dccd",
+		 "CentralZone":"187ed9b8-ee9b-3042-875e-088a08da37ae", "EastZone":"7e543d07-16d1-32bb-94af-95a01f4675f9"}
+
 def preprocess_data(UUID, c, startime, endtime):
 
 	c = mdal.MDALClient("xbos/mdal", client=c)
@@ -64,8 +68,6 @@ def cost_calculator(df, DRs, price_array):
 	return pricing
 
 
-UUIDS = {"SouthZone":"dfb2b403-fd08-3e9b-bf3f-18c699ce40d6", "NorthZone":"5e55e5b1-007b-39fa-98b6-ae01baa6dccd",
-		 "CentralZone":"187ed9b8-ee9b-3042-875e-088a08da37ae", "EastZone":"7e543d07-16d1-32bb-94af-95a01f4675f9"}
 
 with open("cost_config.yml", 'r') as ymlfile:
 	cfg = yaml.load(ymlfile)
@@ -77,9 +79,11 @@ else:
 
 startime =datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"])).astimezone(tz=pytz.timezone("UTC"))
 endtime = datetime.datetime.strptime(cfg["End_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"])).astimezone(tz=pytz.timezone("UTC"))
-df = preprocess_data(UUIDS["SouthZone"], c, startime, endtime)
 
-price_array = cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]]
-DRs = cfg["Pricing"]["DRs"]
-costs = cost_calculator(df, DRs, price_array)
-print sum([i[1] for i in costs])
+for i in cfg["Zones"]:
+	df = preprocess_data(UUIDS[i], c, startime, endtime)
+
+	price_array = cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]]
+	DRs = cfg["Pricing"]["DRs"]
+	costs = cost_calculator(df, DRs, price_array)
+	print i + " : " + str(sum([i[1] for i in costs])) + " USD"
