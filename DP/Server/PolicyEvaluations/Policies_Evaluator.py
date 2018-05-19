@@ -27,7 +27,7 @@ def baseline(data, policy_array, prices_array, zones, popts, kwh):
 			tout = data[zone]["Tout"][i]
 			occ = data[zone]["Occ"][i]
 			action = Utils.action(STPH, STPL, tin)
-			cost = Utils.cost(action, price, *kwh)
+			cost = Utils.cost(action, price, *kwh[zone])
 			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
 
 			other_zones = []
@@ -77,7 +77,7 @@ def reality(data, policy_array, prices_array, zones, kwh):
 			tin = data[zone]["Tin"][i]
 			occ = data[zone]["Occ"][i]
 			action = Utils.action(STPH, STPL, tin)
-			cost = Utils.cost(action, price, *kwh)
+			cost = Utils.cost(action, price, *kwh[zone])
 			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
 
 			OPs.append(occ)
@@ -122,7 +122,7 @@ def relive(data, policy_array, prices_array, zones, popts, kwh):
 			tout = data[zone]["Tout"][i]
 			occ = data[zone]["Occ"][i]
 			action = data[zone]["State"][i]
-			cost = Utils.cost(action, price, *kwh)
+			cost = Utils.cost(action, price, *kwh[zone])
 			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
 
 			other_zones = []
@@ -162,9 +162,18 @@ else:
 
 zones = cfg["Zones"]
 
+
+popts = cfg["popts"]
+kwh = {}
+for i in zones:
+	with open("../ZoneConfigs/"+i+".yml", 'r') as zonefile:
+		cfgz = yaml.load(zonefile)
+	kwh[i] = [cfgz["Advise"]["Heating_Consumption"], cfgz["Advise"]["Cooling_Consumption"]]
+
+
 now = datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"]))
 policy_array = Utils.policy_to_minute(cfg["Setpoint"], now)
-prices_array = Utils.prices_per_minute(cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]], now)
+prices_array = Utils.prices_per_minute(cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]], now, cfg["Pricing"]["DRs"])
 data = Utils.data_fetch(cfg, cli, zones)
 
 
@@ -174,8 +183,7 @@ with open('temp.pckl', 'wb') as fp:
 	pickle.dump(data, fp)
 """
 
-popts = cfg["popts"]
-kwh = cfg["kwh"]
+
 baseline(data, policy_array, prices_array, zones, popts, kwh)
 reality(data, policy_array, prices_array, zones, kwh)
 relive(data, policy_array, prices_array, zones,popts, kwh)

@@ -114,7 +114,7 @@ def policy_to_minute(policy, now):
 
 	return setpoints[:-1]
 
-def prices_per_minute(price_array, now):
+def prices_per_minute(price_array, now, DRs):
 	now_time = now
 	pricing = []
 
@@ -123,7 +123,16 @@ def prices_per_minute(price_array, now):
 
 		for j in price_array[i]:
 
-			if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+			flag = True
+			for dr in DRs:
+				if in_between(now_time.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
+							  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
+						(now_time.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
+					pricing.append(dr[3])
+					flag = False
+					break
+
+			if flag and in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 						  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
 				pricing.append(j[2])
 				break
@@ -151,18 +160,13 @@ def action(STPH, STPL, Tin):
 	else:
 		return 0.
 
-def cost(action, price, heatE, coolE, ventE):
+def cost(action, price, heatE, coolE):
 
 	if action == 'Cooling' or action == 2.:
 		return (coolE / 60.) * price
 	elif action == 'Heating' or action == 1.:
 		return (heatE / 60.) * price
-	elif action == 'Ventilation' or action == 3.:
-		return 0#(ventE / 60.) * price
-	elif action == 'Do Nothing' or action == 0.:
-		return 0
 	else:
-		print("picked wrong action")
 		return 0
 
 
