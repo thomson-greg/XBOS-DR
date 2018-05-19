@@ -28,8 +28,8 @@
       <file leaf-file-name="DataManager.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/DataManager.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="214">
-              <caret line="349" column="17" lean-forward="true" selection-start-line="349" selection-start-column="17" selection-end-line="349" selection-end-column="17" />
+            <state relative-caret-position="400">
+              <caret line="360" column="16" lean-forward="true" selection-start-line="360" selection-start-column="16" selection-end-line="360" selection-end-column="43" />
               <folding>
                 <element signature="e#0#15#0" expanded="true" />
                 <element signature="e#8478#8688#0" expanded="false" />
@@ -478,8 +478,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/DataManager.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="214">
-          <caret line="349" column="17" lean-forward="true" selection-start-line="349" selection-start-column="17" selection-end-line="349" selection-end-column="17" />
+        <state relative-caret-position="400">
+          <caret line="360" column="16" lean-forward="true" selection-start-line="360" selection-start-column="16" selection-end-line="360" selection-end-column="43" />
           <folding>
             <element signature="e#0#15#0" expanded="true" />
             <element signature="e#8478#8688#0" expanded="false" />
