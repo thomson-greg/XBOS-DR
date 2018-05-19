@@ -160,7 +160,7 @@ if cfg["Server"]:
 else:
 	cli = get_client()
 
-zones = ["SouthZone", "NorthZone", "CentralZone", "EastZone"]
+zones = cfg["Zones"]
 
 now = datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"]))
 policy_array = Utils.policy_to_minute(cfg["Setpoint"], now)
@@ -174,8 +174,8 @@ with open('temp.pckl', 'wb') as fp:
 	pickle.dump(data, fp)
 """
 
-popts = [0.0002, -0.0004, 0.00002, 0.00001, 0.00001, 0.00001, 0.00001]
-kwh = [0.075, 1.25, 0.03]
+popts = cfg["popts"]
+kwh = cfg["kwh"]
 baseline(data, policy_array, prices_array, zones, popts, kwh)
 reality(data, policy_array, prices_array, zones, kwh)
 relive(data, policy_array, prices_array, zones,popts, kwh)

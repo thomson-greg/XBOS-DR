@@ -7,6 +7,8 @@ Start_Date : "2018-5-10 00:00:00"
 End_Date : "2018-5-13 00:00:00"
 Zones : ["SouthZone", "NorthZone", "CentralZone", "EastZone"]
 Setpoint: [[["00:00", "07:00", 60., 85.], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", 60., 85.]], [["00:00", "00:00", 60, 85]]]
+popts : [0.0002, -0.0004, 0.00002, 0.00001, 0.00001, 0.00001, 0.00001] #c1 through c7
+kwh : [0.075, 1.25, 0.03] #heat, then cool, then ventilation consumptions
 
 Pricing:
   #First sublist is weekday, second list is weekend
