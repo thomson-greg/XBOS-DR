@@ -171,7 +171,8 @@ for i in zones:
 	kwh[i] = [cfgz["Advise"]["Heating_Consumption"], cfgz["Advise"]["Cooling_Consumption"]]
 
 
-now = datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(cfg["Pytz_Timezone"]))
+uspac = pytz.timezone(cfg["Pytz_Timezone"])
+now = uspac.localize(datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S'))
 policy_array = Utils.policy_to_minute(cfg["Setpoint"], now)
 prices_array = Utils.prices_per_minute(cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]], now, cfg["Pricing"]["DRs"])
 data = Utils.data_fetch(cfg, cli, zones)

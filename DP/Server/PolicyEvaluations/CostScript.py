@@ -47,19 +47,21 @@ def cost_calculator(df, DRs, price_array):
 
 		i = 1 if index.weekday() >= 5  else 0
 
+		flag = True
+		for dr in DRs:
+			if in_between(index.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
+						  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
+					(index.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
+				pricing.append([index, dr[3] * kwH(row["State"])])
+				flag = False
+				break
+
 		for j in price_array[i]:
 
-			flag = True
-			for dr in DRs:
-				if in_between(index.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
-							  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
-						(index.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
+			if not flag:
+				break
 
-					pricing.append([index,dr[3]*kwH(row["State"])])
-					flag = False
-					break
-
-			if flag and in_between(index.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+			if in_between(index.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 								   datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))) :
 
 				pricing.append([index,j[2]*kwH(row["State"])])

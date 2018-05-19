@@ -101,7 +101,7 @@ class Occupancy:
 
 if __name__ == '__main__':
 	import yaml
-	from DataManager import DataManager
+	from DP.Server.DataManager import DataManager
 	from xbos import get_client
 
 	with open("config_file.yml", 'r') as ymlfile:

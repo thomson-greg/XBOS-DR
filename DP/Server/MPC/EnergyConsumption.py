@@ -1,5 +1,4 @@
 import datetime, pytz
-from datetime import timedelta
 
 # TODO ask someone what is going wrong with the price archiver
 # TODO add energy prediction capabilities

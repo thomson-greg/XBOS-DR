@@ -1,8 +1,9 @@
 import datetime, time, math, pytz, sys, threading
-import pandas as pd
 import yaml
 from NormalSchedule import NormalSchedule
 from DataManager import DataManager
+import sys
+sys.path.insert(0, 'MPC')
 from Advise import Advise
 from xbos import get_client
 from xbos.services.hod import HodClient

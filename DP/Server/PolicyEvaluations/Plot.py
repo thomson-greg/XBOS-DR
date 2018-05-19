@@ -5,7 +5,7 @@ import pickle
 
 
 ########## Init Data
-with open ('CentralZone_r.pckl', 'rb') as fp:
+with open ('EastZone_r.pckl', 'rb') as fp:
     return_dict = pickle.load(fp)
 
 OPs = [i for i in return_dict["occupancy"]]

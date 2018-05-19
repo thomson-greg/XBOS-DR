@@ -121,18 +121,20 @@ def prices_per_minute(price_array, now, DRs):
 	while now_time <= now + timedelta(hours=24):
 		i = 0 if now_time.weekday() < 5 else 1
 
+		flag = True
+		for dr in DRs:
+			if in_between(now_time.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
+						  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
+					(now_time.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
+				pricing.append(dr[3])
+				flag = False
+				break
+
 		for j in price_array[i]:
 
-			flag = True
-			for dr in DRs:
-				if in_between(now_time.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
-							  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
-						(now_time.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
-					pricing.append(dr[3])
-					flag = False
-					break
-
-			if flag and in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+			if not flag:
+				break
+			if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 						  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
 				pricing.append(j[2])
 				break

@@ -3,7 +3,7 @@ Server : False
 Hod_Client: "ciee/hod"
 Entity_File: "fill_this.ent"
 Agent_IP: '1.3.3.7:1337'
-Start_Date : "2018-5-10 00:00:00"
+Start_Date : "2018-5-11 00:00:00"
 End_Date : "2018-5-13 00:00:00" # this does not work for the Policies_Evaluator.py, only for CostScript
 Zones : ["SouthZone", "NorthZone", "CentralZone", "EastZone"]
 Setpoint: [[["00:00", "07:00", 60., 85.], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", 60., 85.]], [["00:00", "00:00", 60, 85]]]
@@ -14,7 +14,7 @@ Pricing:
   #First sublist is weekday, second list is weekend
   Energy_Rates: "TOU-Summer" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
   Holiday: False
-  DRs : [['2018-5-10', "14:00", "15:00", 0.858]]
+  DRs : [['2018-5-11', "14:00", "15:00", 0.858]]
   NON-TOU-Summer: [[["00:00", "00:00", 0.25]], [["00:00", "00:00", 0.25]]]
   NON-TOU-Winter: [[["00:00", "00:00", 0.19]], [["00:00", "00:00", 0.19]]]
   TOU-Summer: [[["00:00", "08:30", 0.21],["08:30", "12:00", 0.24],["12:00", "18:00", 0.26],["18:00", "21:30", 0.24],["21:30", "00:00", 0.21]], [["00:00","00:00",0.21]]]

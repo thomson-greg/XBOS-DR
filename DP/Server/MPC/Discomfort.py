@@ -1,5 +1,4 @@
 import datetime, pytz
-from datetime import timedelta
 
 class Discomfort:
 	def __init__(self, setpoints, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone("America/Los_Angeles"))):
