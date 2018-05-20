@@ -9,7 +9,6 @@ from xbos import get_client
 from xbos.services.hod import HodClient
 from xbos.devices.thermostat import Thermostat
 
-# TODO only one zone at a time, making multizone comes soon
 
 # the main controller
 def hvac_control(cfg, advise_cfg, tstat, client):
@@ -99,17 +98,22 @@ class ZoneThread (threading.Thread):
 				advise_cfg = yaml.load(ymlfile)
 		except:
 			print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
-			return
+			return #TODO MAKE THIS RUN NORMAL SCHEDULE SOMEHOW WHEN NO ZONE CONFIG EXISTS
 
-		count = 0
-		while not hvac_control(self.cfg, advise_cfg, self.tstat, self.client) and count < self.cfg["Thermostat_Write_Tries"]:
-			time.sleep(10)
-			count += 1
-			if count == self.cfg["Thermostat_Write_Tries"]:
-				print("Problem with MPC, entering normal schedule.")
-				normal_schedule = NormalSchedule(cfg, tstat)
-				normal_schedule.normal_schedule()
-				break
+
+		if advise_cfg["Advise"]["MPC"]:
+			count = 0
+			while not hvac_control(self.cfg, advise_cfg, self.tstat, self.client):
+				time.sleep(10)
+				count += 1
+				if count == self.cfg["Thermostat_Write_Tries"]:
+					print("Problem with MPC, entering normal schedule.")
+					normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
+					normal_schedule.normal_schedule()
+					break
+		else:
+			normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
+			normal_schedule.normal_schedule()
 
 
 if __name__ == '__main__':

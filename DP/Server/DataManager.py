@@ -186,7 +186,7 @@ class DataManager:
 
 	def weather_fetch(self):
 		from dateutil import parser
-		coordinates = self.controller_cfg["Coordinates"]  # TODO place this in the config file
+		coordinates = self.controller_cfg["Coordinates"]
 
 		if not os.path.exists("weather.json"):
 			temp = requests.get("https://api.weather.gov/points/" + coordinates).json()
@@ -266,7 +266,7 @@ class DataManager:
 				i = 1 if now_time.weekday() >= 5 or self.controller_cfg["Pricing"]["Holiday"] else 0
 				for j in price_array[i]:
 					if in_between(now_time.time(), datetime.time(DR_start_time[0], DR_start_time[1]), datetime.time(DR_finish_time[0], DR_finish_time[1])) and \
-						(self.controller_cfg["Pricing"]["DR"] or now_time.weekday()==4):
+						(self.controller_cfg["Pricing"]["DR"] or now_time.weekday()==4): #TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
 						pricing.append(self.controller_cfg["Pricing"]["DR_Price"])
 					elif in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
