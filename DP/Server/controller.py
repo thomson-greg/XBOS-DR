@@ -14,7 +14,7 @@ from xbos.devices.thermostat import Thermostat
 # the main controller
 def hvac_control(cfg, advise_cfg, tstat, client):
 
-	now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
+	now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
 	try:
 		dataManager = DataManager(cfg, advise_cfg, client, now=now)
@@ -36,7 +36,8 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 					 advise_cfg["Advise"]["Max_Actions"],
 					 advise_cfg["Advise"]["Thermal_Precision"],
 					 advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
-					 setpoints_array)
+					 setpoints_array,
+					 advise_cfg["Advise"]["Sensors"])
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:
@@ -94,7 +95,7 @@ class ZoneThread (threading.Thread):
 	def run(self):
 
 		try:
-			with open('ZoneConfigs/' + self.zone + '.yml', 'r') as ymlfile:
+			with open("Buildings/" + self.cfg["Building"] + "/ZoneConfigs/"+ self.zone +".yml", 'r') as ymlfile:
 				advise_cfg = yaml.load(ymlfile)
 		except:
 			print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
@@ -133,7 +134,7 @@ if __name__ == '__main__':
 		with open(yaml_filename, 'r') as ymlfile:
 			cfg = yaml.load(ymlfile)
 
-		hc = HodClient(cfg["Hod_Client"], client)
+		hc = HodClient(cfg["Building"]+"/hod", client)
 
 		q = """SELECT ?uri ?zone WHERE {
 			?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .

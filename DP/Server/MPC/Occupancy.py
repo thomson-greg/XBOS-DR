@@ -81,23 +81,28 @@ def predict(data, now, similar_moments, prediction_time, resample_time):
 
 # TODO find the right number of similar dates and days of data (days of data are in DataManager)
 class Occupancy:
-	def __init__(self, df, interval, hours, occ_obs_len_addition):
+	def __init__(self, df, interval, hours, occ_obs_len_addition, sensors):
+		self.sensors = sensors
+		if sensors:
+			observation_length_addition = occ_obs_len_addition*60 # minutes added from prev date
+			k = 5 # number of similar days, not in config - needs validation
+			prediction_time = hours*60 # # of hours ahead for prediction
+			resample_time = interval # interval length
+			now = df.index[-1]
 
-		observation_length_addition = occ_obs_len_addition*60 # minutes added from prev date
-		k = 5 # number of similar days, not in config - needs validation
-		prediction_time = hours*60 # # of hours ahead for prediction
-		resample_time = interval # interval length
-		now = df.index[-1]
-		
-		observation_length = mins_in_day(now) + observation_length_addition
-		similar_moments = find_similar_days(df, now, observation_length, k)
-		self.predictions = predict(df, now, similar_moments, prediction_time, resample_time)
-		
+			observation_length = mins_in_day(now) + observation_length_addition
+			similar_moments = find_similar_days(df, now, observation_length, k)
+			self.predictions = predict(df, now, similar_moments, prediction_time, resample_time)
+		else:
+			self.predictions = df
 	def occ(self, now_time):
 		"""
 		Occupancy getter
 		"""
-		return self.predictions[0][now_time]
+		if self.sensors:
+			return self.predictions[0][now_time]
+		else:
+			return self.predictions[now_time]
 
 if __name__ == '__main__':
 	import yaml
@@ -110,7 +115,7 @@ if __name__ == '__main__':
 	with open("../config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("../ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
@@ -120,5 +125,5 @@ if __name__ == '__main__':
 
 	dm = DataManager(cfg, advise_cfg, c)
 	
-	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4)
+	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4, advise_cfg["Advise"]["Sensors"])
 	print occ.occ(6)

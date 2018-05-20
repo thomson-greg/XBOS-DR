@@ -184,7 +184,7 @@ class Advise:
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
 				 prices, lamda, interval, predictions_hours, plot_bool,
 				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
-				 thermal_precision, occ_obs_len_addition, setpoints):
+				 thermal_precision, occ_obs_len_addition, setpoints, sensors):
 
 		self.plot =plot_bool
 		self.current_time = current_time
@@ -193,7 +193,7 @@ class Advise:
 		disc = Discomfort(setpoints, now=self.current_time)
 		th = ThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
 						  max_actions=max_actions, thermal_precision=thermal_precision)
-		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition)
+		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition, sensors)
 		safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
 		energy = EnergyConsumption(prices, interval, now=self.current_time,
 								   heat=heating_cons, cool=cooling_cons)
@@ -240,7 +240,7 @@ if __name__ == '__main__':
 	with open("../config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("../ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
@@ -254,7 +254,7 @@ if __name__ == '__main__':
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 dm.prices(), 0.995, 15, 1, False,
 				 87, 55, 0.075, 1.25, 400, 400., 4,
-				 dm.building_setpoints())
+				 dm.building_setpoints(), advise_cfg["Advise"]["Sensors"])
 
 	print adv.advise()
 	

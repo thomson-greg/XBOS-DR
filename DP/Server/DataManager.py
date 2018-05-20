@@ -36,46 +36,75 @@ class DataManager:
 		Pandas DataFrame
 		"""
 
-		hod = HodClient(self.controller_cfg["Hod_Client"], self.c)
+		if self.advise_cfg["Advise"]["Sensors"]:
+			hod = HodClient(self.controller_cfg["Building"]+"/hod", self.c)
 
-		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
-		  ?sensor rdf:type brick:Occupancy_Sensor .
-		  ?sensor bf:isLocatedIn/bf:isPartOf ?zone .
-		  ?sensor bf:uuid ?uuid .
-		  ?zone rdf:type brick:HVAC_Zone
-		};
-		""" # get all the occupancy sensors uuids
+			occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
+			  ?sensor rdf:type brick:Occupancy_Sensor .
+			  ?sensor bf:isLocatedIn/bf:isPartOf ?zone .
+			  ?sensor bf:uuid ?uuid .
+			  ?zone rdf:type brick:HVAC_Zone
+			};
+			""" # get all the occupancy sensors uuids
 
-		results = hod.do_query(occ_query) # run the query
-		uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']] # unpack
+			results = hod.do_query(occ_query) # run the query
+			uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']] # unpack
 
-		# only choose the sensors for the zone specified in cfg
-		query_list = []
-		for i in uuids:
-			if i[0] == self.zone:
-				query_list.append(i[1])
+			# only choose the sensors for the zone specified in cfg
+			query_list = []
+			for i in uuids:
+				if i[0] == self.zone:
+					query_list.append(i[1])
 
-		# get the sensor data
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
-		dfs = c.do_query({'Composition': query_list,
-						  'Selectors': [mdal.MAX] * len(query_list),
-						  'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'WindowSize': str(self.interval) + 'min',
-								   'Aligned': True}})
+			# get the sensor data
+			c = mdal.MDALClient("xbos/mdal", client=self.c)
+			dfs = c.do_query({'Composition': query_list,
+							  'Selectors': [mdal.MAX] * len(query_list),
+							  'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+									   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+									   'WindowSize': str(self.interval) + 'min',
+									   'Aligned': True}})
 
-		dfs = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+			dfs = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
-		df = dfs[[query_list[0]]]
-		df.columns.values[0] = 'occ'
-		df.is_copy = False
-		df.columns = ['occ']
-		# perform OR on the data, if one sensor is activated, the whole zone is considered occupied
-		for i in range(1, len(query_list)):
-			df.loc[:, 'occ'] += dfs[query_list[i]]
-		df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
+			df = dfs[[query_list[0]]]
+			df.columns.values[0] = 'occ'
+			df.is_copy = False
+			df.columns = ['occ']
+			# perform OR on the data, if one sensor is activated, the whole zone is considered occupied
+			for i in range(1, len(query_list)):
+				df.loc[:, 'occ'] += dfs[query_list[i]]
+			df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
 
-		return df.tz_localize(None)
+			return df.tz_localize(None)
+		else:
+			occupancy_array = self.advise_cfg["Advise"]["Occupancy_Schedule"]
+
+			def in_between(now, start, end):
+				if start < end:
+					return start <= now < end
+				elif end < start:
+					return start <= now or now < end
+				else:
+					return True
+
+			now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
+			occupancy = []
+
+			while now_time <= self.now + timedelta(hours=self.horizon):
+				i = now_time.weekday()
+
+				for j in occupancy_array[i]:
+					if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+						occupancy.append(j[2])
+						break
+
+				now_time += timedelta(minutes=self.interval)
+
+			return occupancy
+
+
 
 
 	def preprocess_therm(self):
@@ -156,33 +185,36 @@ class DataManager:
 		return df.tz_localize(None)
 
 	def weather_fetch(self):
-
-		wunderground_key =  self.controller_cfg["Wunderground_Key"]
-		wunderground_place = self.controller_cfg["Wunderground_Place"]
+		from dateutil import parser
+		coordinates = self.controller_cfg["Coordinates"]  # TODO place this in the config file
 
 		if not os.path.exists("weather.json"):
-			weather = requests.get("http://api.wunderground.com/api/"+ wunderground_key+ "/hourly/q/pws:"+ wunderground_place +".json")
+			temp = requests.get("https://api.weather.gov/points/" + coordinates).json()
+			weather = requests.get(temp["properties"]["forecastHourly"])
 			data = weather.json()
 			with open('weather.json', 'w') as f:
 				json.dump(data, f)
 
 		myweather = json.load(open("weather.json"))
-		json_day = int(myweather['hourly_forecast'][0]["FCTTIME"]["mday"])
-		json_month = int(myweather['hourly_forecast'][0]["FCTTIME"]["mon"])
-		json_year = int(myweather['hourly_forecast'][0]["FCTTIME"]["year"])
-		json_hour = int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"])
-		if (json_hour < self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour) or \
-			(datetime.datetime(json_year,json_month,json_day).replace(tzinfo=pytz.timezone(self.pytz_timezone)) <
-			 datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone(self.pytz_timezone))):
-			weather = requests.get("http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
+		json_start = parser.parse(myweather["properties"]["periods"][0]["startTime"])
+		if (json_start.hour < self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour) or \
+				(datetime.datetime(json_start.year, json_start.month, json_start.day).replace(tzinfo=pytz.timezone(self.pytz_timezone)) <
+				 datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(
+					 tz=pytz.timezone(self.pytz_timezone))):
+			temp = requests.get("https://api.weather.gov/points/" + coordinates).json()
+			weather = requests.get(temp["properties"]["forecastHourly"])
 			data = weather.json()
 			with open('weather.json', 'w') as f:
 				json.dump(data, f)
 			myweather = json.load(open("weather.json"))
 
 		weather_predictions = {}
-		for data in myweather['hourly_forecast']:
-			weather_predictions[int(data["FCTTIME"]["hour"])] = int(data["temp"]["english"])
+
+		for i, data in enumerate(myweather["properties"]["periods"]):
+			hour = parser.parse(data["startTime"]).hour
+			weather_predictions[hour] = int(data["temperature"])
+			if i == self.horizon:
+				break
 
 		return weather_predictions
 
@@ -247,7 +279,7 @@ class DataManager:
 
 	def building_setpoints(self):
 
-		setpoints_array = self.advise_cfg["Advise"]["Setpoint"]
+		setpoints_array = self.advise_cfg["Advise"]["Setpoints"]
 		def in_between(now, start, end):
 			if start < end:
 				return start <= now < end
@@ -260,7 +292,8 @@ class DataManager:
 		setpoints = []
 
 		while now_time <= self.now + timedelta(hours=self.horizon):
-			i = 0 if now_time.weekday() < 5 else 1
+			i = now_time.weekday()
+
 			for j in setpoints_array[i]:
 				if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
 							  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
@@ -276,7 +309,7 @@ if __name__ == '__main__':
 	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("Buildings/"+cfg["Building"]+"/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
