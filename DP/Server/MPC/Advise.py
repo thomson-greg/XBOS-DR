@@ -1,17 +1,17 @@
-import datetime
-
 import networkx as nx
 import numpy as np
-import plotly.offline as py
-import pytz
 import yaml
-from Discomfort import Discomfort
-from EnergyConsumption import EnergyConsumption
+
+from ThermalModel import ThermalModel
 from Occupancy import Occupancy
+from Discomfort import Discomfort
 from Safety import Safety
-from ThermalModelOLD import ThermalModel
+from EnergyConsumption import EnergyConsumption
+import datetime
+import pytz
+
 from utils import plotly_figure
-from ThermalModel import MPCThermalModel
+import plotly.offline as py
 
 
 class Node:
@@ -103,7 +103,7 @@ class EVA:
             return
 
         # create the action set (0 is for do nothing, 1 is for cooling, 2 is for heating)
-        action_set = self.safety.safety_actions(from_node.temps)
+        action_set = self.safety.safety_actions(from_node.temps, from_node.time / self.interval)
 
         # iterate for each available action
         for action in action_set:
@@ -112,21 +112,19 @@ class EVA:
             new_temperature = []
             consumption = []
             for i in range(self.noZones):
-                #TODO need to associate zone name to i
                 new_temperature.append(self.th.next_temperature(from_node.temps[i],
                                                                 action[i],
                                                                 from_node.time / self.interval, zone=i))
-
                 consumption.append(self.energy.calc_cost(action[i], from_node.time / self.interval))
-
-            if self.safety.safety_check(new_temperature) and len(action_set) > 1:
-                continue
 
             # create the node that describes the predicted data
             new_node = Node(
                 temps=new_temperature,
                 time=from_node.time + self.interval
             )
+
+            if self.safety.safety_check(new_temperature, new_node.time / self.interval) and len(action_set) > 1:
+                continue
 
             # calculate interval discomfort
             discomfort = [0] * self.noZones
@@ -184,28 +182,22 @@ class EVA:
 
 class Advise:
     # the Advise class initializes all the Models and runs the shortest path algorithm
-    def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
-                 prices, lamda, interval, predictions_hours, plot_bool,
-                 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
-                 thermal_precision, occ_obs_len_addition, setpoints):
+    def __init__(self, current_time, occupancy_data, zone_temperature, thermal_model, weather_predictions, # don't forget to use weather_pre
+                 prices, lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons,
+                 thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
         self.plot = plot_bool
         self.current_time = current_time
 
         # initialize all models
         disc = Discomfort(setpoints, now=self.current_time)
 
-        # initialize and fit thermal model
-        th = MPCThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
-                          max_actions=max_actions, thermal_precision=thermal_precision)
 
-        #-------------------
-
-        occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition)
-        safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
+        occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition, sensors)
+        safety = Safety(safety_constraints, noZones=1)
         energy = EnergyConsumption(prices, interval, now=self.current_time,
                                    heat=heating_cons, cool=cooling_cons)
 
-        Zones_Starting_Temps = [thermal_data['t_next'][-1]]
+        Zones_Starting_Temps = zone_temperature
         self.root = Node(Zones_Starting_Temps, 0)
 
         # initialize the shortest path model
@@ -215,7 +207,7 @@ class Advise:
             pred_window=predictions_hours * 60 / interval,
             interval=interval,
             discomfort=disc,
-            thermal=th,
+            thermal=thermal_model,
             occupancy=occ,
             safety=safety,
             energy=energy,
@@ -250,7 +242,7 @@ if __name__ == '__main__':
     with open("../config_file.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
-    with open("../ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+    with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
         advise_cfg = yaml.load(ymlfile)
 
     if cfg["Server"]:
@@ -263,9 +255,9 @@ if __name__ == '__main__':
     adv = Advise(
         datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz=pytz.timezone("America/Los_Angeles")),
         dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
-        dm.prices(), 0.995, 15, 1, False,
+        dm.prices(), 0.995, 15, 1, True,
         87, 55, 0.075, 1.25, 400, 400., 4,
-        dm.building_setpoints())
+        dm.building_setpoints(), advise_cfg["Advise"]["Sensors"], dm.safety_constraints())
 
     print
     adv.advise()

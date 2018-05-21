@@ -1,293 +1,365 @@
-import os, datetime, pytz
-import requests
+import datetime
 import json
-from xbos import get_client
-from xbos.services.hod import HodClient
+import os
+import pytz
 from datetime import timedelta
-from xbos.services import mdal
+
 import pandas as pd
-import yaml
-from copy import copy
+import numpy as np
+import requests
+from xbos import get_client
+from xbos.services import mdal
+from xbos.services.hod import HodClient
+
 
 # TODO add energy data acquisition
 # TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
 
 
 class DataManager:
-	"""
-	# Class that handles all the data fetching and some of the preprocess
-	"""
-	def __init__(self, controller_cfg, advise_cfg, client, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+    """
+    # Class that handles all the data fetching and some of the preprocess
+    """
 
-		self.controller_cfg = controller_cfg
-		self.advise_cfg = advise_cfg
-		self.pytz_timezone = controller_cfg["Pytz_Timezone"]
-		self.zone = advise_cfg["Data_Manager"]["Zone"]
-		self.interval = controller_cfg["Interval_Length"]
-		self.now = now
-		self.horizon = advise_cfg["Advise"]["Hours"]
-		self.c = client
+    def __init__(self, building, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+
+        self.pytz_timezone = pytz.timezone("America/Los_Angeles")
+        self.building = building
+        self.interval = 15
+        self.now = now
+
+        self.window_size = 1 # 1 min windosize for mdal.
 
 
-	def preprocess_occ(self):
-		"""
-		Returns the required dataframe for the occupancy predictions
-		-------
-		Pandas DataFrame
-		"""
+        self.client = get_client()
 
-		hod = HodClient(self.controller_cfg["Hod_Client"], self.c)
+        self.hod_client = HodClient("xbos/hod", self.client)  # TODO hopefully i could incorporate this into the query.
 
-		occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
+    def preprocess_occ(self):
+        """
+        Returns the required dataframe for the occupancy predictions
+        -------
+        Pandas DataFrame
+        """
+        # this only works for ciee, check how it should be writen properly:
+        hod = HodClient(self.cfg["Data_Manager"]["Hod_Client"], self.client)
+
+        occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 		  ?sensor rdf:type brick:Occupancy_Sensor .
 		  ?sensor bf:isLocatedIn/bf:isPartOf ?zone .
 		  ?sensor bf:uuid ?uuid .
 		  ?zone rdf:type brick:HVAC_Zone
 		};
-		""" # get all the occupancy sensors uuids
+		"""  # get all the occupancy sensors uuids
 
-		results = hod.do_query(occ_query) # run the query
-		uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']] # unpack
+        results = hod.do_query(occ_query)  # run the query
+        uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']]  # unpack
 
-		# only choose the sensors for the zone specified in cfg
-		query_list = []
-		for i in uuids:
-			if i[0] == self.zone:
-				query_list.append(i[1])
+        # only choose the sensors for the zone specified in cfg
+        query_list = []
+        for i in uuids:
+            if i[0] == self.zone:
+                query_list.append(i[1])
 
-		# get the sensor data
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
-		dfs = c.do_query({'Composition': query_list,
-						  'Selectors': [mdal.MAX] * len(query_list),
-						  'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'WindowSize': str(self.interval) + 'min',
-								   'Aligned': True}})
+        # get the sensor data
+        c = mdal.MDALClient("xbos/mdal")
+        dfs = c.do_query({'Composition': query_list,
+                          'Selectors': [mdal.MAX] * len(query_list),
+                          'Time': {'T0': (self.now - timedelta(days=25)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                   'WindowSize': str(self.interval) + 'min',
+                                   'Aligned': True}})
 
-		dfs = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+        dfs = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
 
-		df = dfs[[query_list[0]]]
-		df.columns.values[0] = 'occ'
-		df.is_copy = False
-		df.columns = ['occ']
-		# perform OR on the data, if one sensor is activated, the whole zone is considered occupied
-		for i in range(1, len(query_list)):
-			df.loc[:, 'occ'] += dfs[query_list[i]]
-		df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
+        df = dfs[[query_list[0]]]
+        df.columns.values[0] = 'occ'
+        df.is_copy = False
+        df.columns = ['occ']
+        # perform OR on the data, if one sensor is activated, the whole zone is considered occupied
+        for i in range(1, len(query_list)):
+            df.loc[:, 'occ'] += dfs[query_list[i]]
+        df.loc[:, 'occ'] = 1 * (df['occ'] > 0)
 
-		return df.tz_localize(None)
+        return df.tz_localize(None)
+
+    def _get_thermal_data(self, start, end):
+        """Get thermostat status and temperature and outside temperature for thermal model.
+        :param start: (datetime) time to start. relative to datamanager instance timezone.
+        :param end: (datetime) time to end. relative to datamanager instance timezone.
+        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. Timerseries are the same for both with same freq."""
+
+        #Converting start and end from datamanger timezone to UTC timezone.
+        start = self.pytz_timezone.localize(start).astimezone(pytz.timezone("UTC"))
+        end = self.pytz_timezone.localize(end).astimezone(pytz.timezone("UTC"))
+
+        # following queries are for the whole building.
+        thermostat_status_query = """SELECT ?zone ?uuid FROM %s WHERE { 
+		  ?tstat rdf:type brick:Thermostat .
+		  ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
+		  ?location_zone rdf:type brick:HVAC_Zone .
+		  ?tstat bf:controls ?RTU .
+		  ?RTU rdf:type brick:RTU . 
+		  ?RTU bf:feeds ?zone. 
+		  ?zone rdf:type brick:HVAC_Zone . 
+		  ?status_point bf:isPointOf ?tstat .
+		  ?status_point rdf:type brick:Thermostat_Status .
+		  ?status_point bf:uuid ?uuid.
+		};"""
+
+        thermostat_temperature_query = """SELECT ?zone ?uuid FROM %s WHERE { 
+		  ?tstat rdf:type brick:Thermostat .
+		  ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
+		  ?location_zone rdf:type brick:HVAC_Zone .
+		  ?tstat bf:controls ?RTU .
+		  ?RTU rdf:type brick:RTU . 
+		  ?RTU bf:feeds ?zone. 
+		  ?zone rdf:type brick:HVAC_Zone . 
+		  ?thermostat_point bf:isPointOf ?tstat .
+		  ?thermostat_point rdf:type brick:Temperature_Sensor .
+		  ?thermostat_point bf:uuid ?uuid.
+		};"""
+
+        outside_temperature_query = """SELECT ?weather_station ?uuid FROM %s WHERE {
+			?weather_station rdf:type brick:Weather_Temperature_Sensor.
+			?weather_station bf:uuid ?uuid.
+		};"""
+
+        temp_thermostat_query_data = {
+            "tstat_temperature": self.hod_client.do_query(thermostat_temperature_query % self.building)["Rows"],
+            "tstat_action": self.hod_client.do_query(thermostat_status_query % self.building)["Rows"],
+        }
+
+        # give the thermostat query data better structure for later loop. Can index by zone and then get uuids for each
+        # thermostat attribute.
+        thermostat_query_data = {}
+        for tstat_attr, attr_dicts in temp_thermostat_query_data.items():
+            for dict in attr_dicts:
+                if dict["?zone"] not in thermostat_query_data:
+                    thermostat_query_data[dict["?zone"]] = {}
+                thermostat_query_data[dict["?zone"]][tstat_attr] = dict["?uuid"]
+
+        # get outside temperature data
+        outside_temperature_query_data = self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][
+            0]  # TODO for now taking the first weather station. Should be determined based on metadata.
+        c = mdal.MDALClient("xbos/mdal", client=self.client)
+        outside_temperature_data = c.do_query({
+            'Composition': ["1c467b79-b314-3c1e-83e6-ea5e7048c37b"], # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
+            'Selectors': [mdal.MEAN]
+            , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'WindowSize': str(self.window_size) + 'min',
+                       'Aligned': True}})
+        outside_temperature_data = outside_temperature_data["df"] # since only data for one uuid
+        outside_temperature_data.columns = ["t_out"]
+
+        # get the data for the thermostats for each zone.
+        zone_thermal_data = {}
+        for zone, dict in thermostat_query_data.items():
+            # get the thermostat data
+            dfs = c.do_query({'Composition': [dict["tstat_temperature"], dict["tstat_action"]],
+                              'Selectors': [mdal.MEAN, mdal.MAX]
+                                 , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                           'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                           'WindowSize': str(self.window_size) + 'min',
+                                            'Aligned': True}})
+            df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+
+            zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
 
 
-	def preprocess_therm(self):
+        # TODO Note: The timezone for the data relies to be converted by MDAL to the local timezone.
+        return zone_thermal_data, outside_temperature_data
 
-		#TODO get this done automated.
-		def f1(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['action'] == 1.:
-				val = 1
-			else:
-				val = 0
-			return val
 
-		# if state is 2 we are doing cooling
-		def f2(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['action'] == 2.:
-				val = 1
-			else:
-				val = 0
-			return val
+    def _preprocess_thermal_data(self, zone_data, outside_data):
+        """Preprocesses the data for the thermal model.
+        :param zone_data: dict{zone: pd.df columns["tin", "a"]}
+        :param outside_data: pd.df columns["tout"]. 
+        Note: Timerseries are the same for zone_data and outside_dataa with same freq. 
+        
+        :returns {zone: pd.df columns: t_in', 't_next', 'dt','t_out', 'action', 'a1', 'a2', [other mean zone temperatures]}
+                 where t_out and zone temperatures are the mean values over the intervals. 
+                 a1 is whether heating and a2 whether cooling."""
 
-		def f3(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['a'] > 0 and row['a'] <= 1.:
-				return 1
-			elif row['a'] > 1 and row['a'] <= 2.:
-				return 2
-			else:
-				return 0
 
-		uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
+        # thermal data preprocess starts here
+        def f1(row):
+            """
+            helper function to format the thermal model dataframe
+            """
+            if row['action'] == 1.:
+                val = 1
+            else:
+                val = 0
+            return val
 
-		# get the thermostat data
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
-		dfs = c.do_query({'Composition': uuids,
-						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': (self.now - timedelta(days=100)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'WindowSize': '1min',
-								   'Aligned': True}})
+        # if state is 2 we are doing cooling
+        def f2(row):
+            """
+            helper function to format the thermal model dataframe
+            """
+            if row['action'] == 2.:
+                val = 1
+            else:
+                val = 0
+            return val
 
-		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
-		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
+        def f3(row):
+            """
+            helper function to format the thermal model dataframe
+            """
+            if 0 < row['a'] <= 1:
+                return 1
+            elif 1 < row['a'] <= 2:
+                return 2
+            elif np.isnan(row['a']):
+                return row['a']
+            else:
+                return 0
 
-		# thermal data preprocess starts here
-		# TODO should we really make assumptions ?
+        all_temperatures = pd.concat([tstat_df["t_in"] for tstat_df in zone_data.values()], axis=1)
+        all_temperatures.columns = ["zone_temperature_" + zone for zone in zone_data.keys()]
+        zone_thermal_model_data = {}
 
-		df = df.fillna(method='pad')
-		df['a'] = df.apply(f3, axis=1)
-		df['tin'] = df['tin'].replace(to_replace=0, method='pad')
-		df['t_out'] = df['t_out'].replace(to_replace=0, method='pad')
-		df.dropna()
+        for zone in zone_data.keys():
+            actions = zone_data[zone]["a"]
+            thermal_model_data = pd.concat([all_temperatures, actions, outside_data], axis=1)  # should be copied data according to documentation
+            thermal_model_data = thermal_model_data.rename(columns={"zone_temperature_" + zone: "t_in"})
 
-		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
 
-		listerino = []
-		for j in df.change_of_action.unique():
-			for dfs in [df[df['change_of_action'] == j][i:i + self.interval] for i in
-						range(0, df[df['change_of_action'] == j].shape[0], self.interval)]:
-				listerino.append({'time': dfs.index[0],
-								  'tin': dfs['tin'][0],
-								  't_next': dfs['tin'][-1],
-								  'dt': dfs.shape[0],
-								  'tout': dfs['t_out'][0],
-								  'action': dfs['a'][0]})
-		df = pd.DataFrame(listerino).set_index('time')
-		df['a1'] = df.apply(f1, axis=1)
-		df['a2'] = df.apply(f2, axis=1)
-		return df.tz_localize(None)
+            thermal_model_data['a'] = thermal_model_data.apply(f3, axis=1)
 
-	def weather_fetch(self):
+            # prepares final data type.
+            thermal_model_data['change_of_action'] = (thermal_model_data['a'].diff(1) != 0).astype(
+                'int').cumsum()  # given a row it's the number of times we have had an action change up till then. e.g. from nothing to heating.
+            # This is accomplished by taking the difference of two consecutive rows and checking if their difference is 0 meaning that they had the same action.
 
-		wunderground_key =  self.controller_cfg["Wunderground_Key"]
-		wunderground_place = self.controller_cfg["Wunderground_Place"]
+            # following adds the fields "time", "dt" etc such that we accumulate all values where we have consecutively the same action.
+            # maximally we group terms of total self.interval
+            data_list = []
+            for j in thermal_model_data.change_of_action.unique():
+                for i in range(0, thermal_model_data[thermal_model_data['change_of_action'] == j].shape[0], self.interval):
+                    for dfs in [thermal_model_data[thermal_model_data['change_of_action'] == j][i:i + self.interval]]:
+                        # we only look at intervals where the last and first value for T_in are not Nan.
+                        dfs.dropna(subset=["t_in"])
+                        zone_col_filter = ["zone_temperature_" in col for col in dfs.columns]
+                        temp_data_dict = {'time': dfs.index[0],
+                                          't_in': dfs['t_in'][0],
+                                          't_next': dfs['t_in'][-1],
+                                          'dt': (dfs.index[-1] - dfs.index[0]).seconds/60 + self.window_size, # need to add windowsize for last timestep.
+                                          't_out': dfs['t_out'].mean(), # mean does not count Nan values
+                                          'action': dfs['a'][0]}
 
-		if not os.path.exists("weather.json"):
-			weather = requests.get("http://api.wunderground.com/api/"+ wunderground_key+ "/hourly/q/pws:"+ wunderground_place +".json")
-			data = weather.json()
-			with open('weather.json', 'w') as f:
-				json.dump(data, f)
+                        for temperature_zone in dfs.columns[zone_col_filter]:
+                            # mean does not count Nan values
+                            temp_data_dict[temperature_zone] = dfs[temperature_zone].mean()
+                        data_list.append(temp_data_dict)
 
-		myweather = json.load(open("weather.json"))
-		json_day = int(myweather['hourly_forecast'][0]["FCTTIME"]["mday"])
-		json_month = int(myweather['hourly_forecast'][0]["FCTTIME"]["mon"])
-		json_year = int(myweather['hourly_forecast'][0]["FCTTIME"]["year"])
-		json_hour = int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"])
-		if (json_hour < self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour) or \
-			(datetime.datetime(json_year,json_month,json_day).replace(tzinfo=pytz.timezone(self.pytz_timezone)) <
-			 datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")).astimezone(tz=pytz.timezone(self.pytz_timezone))):
-			weather = requests.get("http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
-			data = weather.json()
-			with open('weather.json', 'w') as f:
-				json.dump(data, f)
-			myweather = json.load(open("weather.json"))
 
-		weather_predictions = {}
-		for data in myweather['hourly_forecast']:
-			weather_predictions[int(data["FCTTIME"]["hour"])] = int(data["temp"]["english"])
+            thermal_model_data = pd.DataFrame(data_list).set_index('time')
+            thermal_model_data['a1'] = thermal_model_data.apply(f1, axis=1)
+            thermal_model_data['a2'] = thermal_model_data.apply(f2, axis=1)
 
-		return weather_predictions
+            thermal_model_data = thermal_model_data.dropna() # final drop. Mostly if the whole interval for the zones or t_out were nan.
 
-	def thermostat_setpoints(self):
+            zone_thermal_model_data[zone] = thermal_model_data
 
-		uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
+            print('one loop done')
+        return zone_thermal_model_data
 
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
-		dfs = c.do_query({'Composition': uuids,
-						  'Selectors': [mdal.MEAN, mdal.MEAN, mdal.MEAN],
-						  'Time': {'T0': (self.now - timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'WindowSize': '1min',
-								   'Aligned': True}})
+    def thermal_data(self, start, end):
+        z, o = self._get_thermal_data(start, end)
+        return self._preprocess_thermal_data(z, o)
 
-		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
-		df = df.rename(columns={uuids[0]: 'T_High', uuids[1]: 'T_Low', uuids[2]: 'T_Mode'})
+    def weather_fetch(self):
 
-		return df['T_High'][-1], df['T_Low'][-1], df['T_Mode'][-1]
+        wunderground_key = self.cfg["Data_Manager"]["Wunderground_Key"]
+        wunderground_place = self.cfg["Data_Manager"]["Wunderground_Place"]
 
-	def prices(self):
+        if not os.path.exists("weather.json"):
+            weather = requests.get(
+                "http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
+            data = weather.json()
+            with open('weather.json', 'w') as f:
+                json.dump(data, f)
 
-		price_array = self.controller_cfg["Pricing"][self.controller_cfg["Pricing"]["Energy_Rates"]]
+        myweather = json.load(open("weather.json"))
+        if int(myweather['hourly_forecast'][0]["FCTTIME"]["hour"]) < \
+                self.now.astimezone(tz=self.pytz_timezone).hour:
+            weather = requests.get(
+                "http://api.wunderground.com/api/" + wunderground_key + "/hourly/q/pws:" + wunderground_place + ".json")
+            data = weather.json()
+            with open('weather.json', 'w') as f:
+                json.dump(data, f)
+            myweather = json.load(open("weather.json"))
 
-		def in_between(now, start, end):
-			if start < end:
-				return start <= now < end
-			elif end < start:
-				return start <= now or now < end
-			else:
-				return True
+        weather_predictions = {}
+        for data in myweather['hourly_forecast']:
+            weather_predictions[int(data["FCTTIME"]["hour"])] = int(data["temp"]["english"])
 
-		if self.controller_cfg["Pricing"]["Energy_Rates"] == "Server":
-			# not implemented yet, needs fixing from the archiver
-			# (always says 0, problem unless energy its free and noone informed me)
-			raise ValueError('SERVER MODE IS NOT YET IMPLEMENTED FOR ENERGY PRICING')
-		else:
-			now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
-			pricing = []
+        return weather_predictions
 
-			DR_start_time = [int(self.controller_cfg["Pricing"]["DR_Start"].split(":")[0]),
-							 int(self.controller_cfg["Pricing"]["DR_Start"].split(":")[1])]
-			DR_finish_time = [int(self.controller_cfg["Pricing"]["DR_Finish"].split(":")[0]),
-							 int(self.controller_cfg["Pricing"]["DR_Finish"].split(":")[1])]
+    def thermostat_setpoints(self):
 
-			while now_time <= self.now + timedelta(hours = self.horizon):
-				i = 1 if now_time.weekday() >= 5 or self.controller_cfg["Pricing"]["Holiday"] else 0
-				for j in price_array[i]:
-					if in_between(now_time.time(), datetime.time(DR_start_time[0], DR_start_time[1]), datetime.time(DR_finish_time[0], DR_finish_time[1])) and \
-						(self.controller_cfg["Pricing"]["DR"] or now_time.weekday()==4):
-						pricing.append(self.controller_cfg["Pricing"]["DR_Price"])
-					elif in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
-								  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
-						pricing.append(j[2])
-						break
+        uuids = [self.cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
+                 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
+                 self.cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]
 
-				now_time += timedelta(minutes=self.interval)
+        c = mdal.MDALClient("xbos/mdal", client=self.client)
+        dfs = c.do_query({'Composition': uuids,
+                          'Selectors': [mdal.MEAN, mdal.MEAN, mdal.MEAN],
+                          'Time': {'T0': (self.now - timedelta(minutes=10)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                                   'WindowSize': '1min',
+                                   'Aligned': True}})
 
-		return pricing
+        df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
+        df = df.rename(columns={uuids[0]: 'T_High', uuids[1]: 'T_Low', uuids[2]: 'T_Mode'})
 
-	def building_setpoints(self):
+        return df['T_High'][-1], df['T_Low'][-1], df['T_Mode'][-1]
 
-		setpoints_array = self.advise_cfg["Advise"]["Setpoint"]
-		def in_between(now, start, end):
-			if start < end:
-				return start <= now < end
-			elif end < start:
-				return start <= now or now < end
-			else:
-				return True
-
-		now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
-		setpoints = []
-
-		while now_time <= self.now + timedelta(hours=self.horizon):
-			i = 0 if now_time.weekday() < 5 else 1
-			for j in setpoints_array[i]:
-				if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
-							  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
-					setpoints.append([j[2], j[3]])
-					break
-
-			now_time += timedelta(minutes=self.interval)
-
-		return setpoints
 
 if __name__ == '__main__':
+    import yaml
 
-	with open("config_file.yml", 'r') as ymlfile:
-		cfg = yaml.load(ymlfile)
+    from xbos.services.hod import HodClient
 
-	with open("ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
-		advise_cfg = yaml.load(ymlfile)
+    hc = HodClient("xbos/hod")
 
-	if cfg["Server"]:
-		c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
-	else:
-		c = get_client()
+    q2 = """
+    SELECT * WHERE {
+        ?sites rdf:type brick:Site.
+    };"""
+    hd_res = hc.do_query(q2)["Rows"]
 
-	dm = DataManager(cfg, advise_cfg, c)
-	print dm.weather_fetch()
-	print dm.preprocess_therm()
-	print dm.preprocess_occ()
-	print dm.thermostat_setpoints()
-	print dm.prices()
-	print dm.building_setpoints()
+
+    dm = DataManager("ciee")
+    # print dm.weather_fetch()
+    import pickle
+    if True:
+        start = datetime.datetime(year=2018, day=1, month=1)
+        end = datetime.datetime(year=2018, day=1, month=3)
+        if False:
+            for b in hd_res[7:]:
+                bldg = b["?sites"]
+                print(bldg)
+
+                dm.building = bldg
+                z = dm.thermal_data(start, end)
+                zone_file = open("zone_thermal_" + dm.building, 'wb')
+                pickle.dump(z, zone_file)
+                zone_file.close()
+        else:
+            z = dm.thermal_data(start, end)
+            zone_file = open("zone_thermal_" + dm.building, 'wb')
+            pickle.dump(z, zone_file)
+            zone_file.close()
+
+
+
+
+# print dm.preprocess_occ()
+# print dm.thermostat_setpoints()
+
+#rsf fails.
