@@ -22,6 +22,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         self._params = None
         self._params_order = None
+        self._filter_columns = None # order of columns by which to filter when predicting and fitting data.
 
 
         # NOTE: if wanting to use cross validation, put these as class variables. Also, change in score, e.g. self.model_error to ThermalModel.model_error
@@ -36,7 +37,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
     def _func(self, X, *coeff):
         """The polynomial with which we model the thermal model.
         :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have to begin with "zone_temperature_" + "zone name"
-        :param *coeff: the coefficients for the thermal model. Should be in order: a1, a2, (Tout - Tin), bias, zones coeffs. 
+        :param *coeff: the coefficients for the thermal model. Should be in order: Tin, a1, a2, (Tout - Tin), bias, zones coeffs (as given by self._params_order)
         """
         Tin, a1, a2, Tout, dt, zone_temperatures = X[0], X[1], X[2], X[3], X[4], X[5:]
 
@@ -58,8 +59,9 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         zone_col = X.columns[["zone_temperature_" in col for col in X.columns]]
         filter_columns = ['t_in', 'a1', 'a2', 't_out', 'dt'] + list(zone_col)
 
-        # give mapping from params to coefficients
-        self._params_order = filter_columns
+        # give mapping from params to coefficients and to store the order in which we get the columns.
+        self._filter_columns = filter_columns
+        self._params_order = ["a1", 'a2', 't_out', 'bias'] + list(zone_col)
 
         popt, pcov = curve_fit(self._func, X[filter_columns].T.as_matrix(), y.as_matrix(),
                                p0=np.ones(len(
@@ -83,7 +85,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
             raise RuntimeError("You must train classifer before predicting data!")
 
         # assumes that pandas gives the right order given that the indexing is in the right order.
-        res = [self._func(X.loc[date][self._params_order], *self._params)
+        res = [self._func(X.loc[date][self._filter_columns], *self._params)
                for date in X.index]
 
         return res
@@ -91,7 +93,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
     def _normalizedRMSE_STD(self, dt, prediction, y):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.'''
         diff = prediction - y
-        diff_scaled = diff * 15. / dt  # to offset for actions which were less than 15 min. makes everything a lot worse
+        diff_scaled = diff * 15. / dt  # to offset for actions which were less than 15 min. Normalizes to 15 min intervals. TODO maybe make variable standard intervals.
         mean_error = np.mean(diff_scaled)
         rmse = np.sqrt(np.mean(np.square(diff_scaled)))
         # standard deviation of the error
@@ -150,7 +152,13 @@ class MPCThermalModel:
         self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in
                                  thermal_data.items()}  # we will keep the temperatures constant throughout the MPC as an approximation.
 
-    def set_zone_temperatures(self, zone_temps):
+        self.weatherPredictions = None # store weather predictions for whole class
+
+    def setWeahterPredictions(self, weatherPredictions):
+        self.weatherPredictions = weatherPredictions
+
+
+    def setZoneTemperatures(self, zone_temps):
         # store curr temperature for every zone. Call whenever we are starting new interval.
         self.zoneTemperatures = zone_temps
 
@@ -162,11 +170,25 @@ class MPCThermalModel:
             zoneModels[zone] = ThermalModel().fit(val, val["t_next"])
         return zoneModels
 
-    def predict(self, temperature, zone, action, outside_temperature, interval=None):
-        """Predicts temperature for zone given."""
+    def predict(self, t_in, zone, action, outside_temperature=None, interval=None, time=-1):
+        """
+        Predicts temperature for zone given.
+        :param t_in: 
+        :param zone: 
+        :param action: 
+        :param outside_temperature: 
+        :param interval: 
+        :param time: the hour index for self.weather_predictions. TODO understand how we can use hours if we look at next days .(i.e. horizon extends over midnight.)
+        :return: 
+        """
         if interval is None:
             interval = self.interval
-        X = {"dt": interval, "t_in": temperature, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
+        if outside_temperature is None:
+            assert time != -1
+            assert self.weatherPredictions is not None
+            outside_temperature = self.weatherPredictions[time]
+
+        X = {"dt": interval, "t_in": t_in, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
              "t_out": outside_temperature}
         for key_zone, val in self.zoneTemperatures.items():
             if key_zone != zone:
@@ -177,10 +199,10 @@ class MPCThermalModel:
     def save_to_config(self):
         """saves the whole model to a yaml file."""
         config_dict = {}
-        # store zone temperatures
-        config_dict["Zone Temperatures"] = self.zoneTemperatures
         for zone in self.zoneThermalModels.keys():
             config_dict[zone] = {}
+            # store zone temperatures
+            config_dict[zone]["Zone Temperatures"] = self.zoneTemperatures
             zone_thermal_model = self.zoneThermalModels[zone]
             # store coefficients
             coefficients = {parameter_name: param for parameter_name, param in zip(zone_thermal_model._params_order, zone_thermal_model._params)}
@@ -193,8 +215,10 @@ class MPCThermalModel:
             config_dict[zone]["Evaluations"]["Better Than Baseline"] = zone_thermal_model.betterThanBaseline
 
 
-        with open("config_ThermalModel", 'wb') as ymlfile:
-            pyaml.dump(config_dict, ymlfile)
+
+        for zone, dict in config_dict.items():
+            with open("../ZoneConfigs/thermal_model_" + zone, 'wb') as ymlfile:
+                pyaml.dump(config_dict[zone], ymlfile)
 
 
 
@@ -212,7 +236,7 @@ if __name__ == '__main__':
 
     mpcThermalModel = MPCThermalModel(therm_data, 15)
     mpcThermalModel.save_to_config()
-    print(mpcThermalModel.predict(70, "HVAC_Zone_Centralzone", 0, 70))
+    print(mpcThermalModel.predict(70, "HVAC_Zone_Southzone", 0, 70))
     #
     # thermal_model = open("thermal_model", "wb")
     # pickle.dump(mpcThermalModel, thermal_model)

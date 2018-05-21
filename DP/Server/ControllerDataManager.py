@@ -223,10 +223,11 @@ class ControllerDataManager:
             print('one loop done')
         return zone_thermal_model_data
 
-    def thermal_data(self, start=None, end=None):
+    def thermal_data(self, start=None, end=None, days_back=60):
         """
         :param start: In timezone of datamanger
         :param end: in timezone of datamanger
+        :param if start is None, then we set start to end - timedelta(days=days_back). 
         :return: pd.df {zone: pd.df columns: t_in', 't_next', 'dt','t_out', 'action', 'a1', 'a2', [other mean zone temperatures]}
                  where t_out and zone temperatures are the mean values over the intervals. 
                  a1 is whether heating and a2 whether cooling.
@@ -234,7 +235,7 @@ class ControllerDataManager:
         if end is None:
             end = self.now
         if start is None:
-            start = end - timedelta(days=100)
+            start = end - timedelta(days=days_back)
 
         z, o = self._get_thermal_data(start, end)
         return self._preprocess_thermal_data(z, o)
@@ -251,24 +252,11 @@ if __name__ == '__main__':
     else:
         c = get_client()
 
-    dm = ControllerDataManager(cfg, c)
-    # print
-    # dm.weather_fetch()
     dm = ControllerDataManager(controller_cfg=cfg, client=c)
-    # print dm.weather_fetch()
     import pickle
 
-    if True:
+    z = dm.thermal_data()
+    zone_file = open("zone_thermal_" + dm.building, 'wb')
+    pickle.dump(z, zone_file)
+    zone_file.close()
 
-        z = dm.thermal_data()
-        zone_file = open("zone_thermal_" + dm.building, 'wb')
-        pickle.dump(z, zone_file)
-        zone_file.close()
-    # print
-    # dm.preprocess_occ()
-    # print
-    # dm.thermostat_setpoints()
-    # print
-    # dm.prices()
-    # print
-    # dm.building_setpoints()

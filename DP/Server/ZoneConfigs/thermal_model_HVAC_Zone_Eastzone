@@ -1,0 +1,50 @@
+Evaluations:
+  ActionOrder:
+    - -1
+    - 0
+    - 1
+    - 2
+  Baseline:
+    - mean: -0.004080718622830784
+      rmse: 0.24452875059429907
+      std: 0.24449469851661446
+    - mean: 0.032348273678186774
+      rmse: 0.1648500716098913
+      std: 0.16164509055281392
+    - mean: -0.3575768661364086
+      rmse: 0.6134469239880064
+      std: 0.49845352175946345
+    - mean: .nan
+      rmse: .nan
+      std: .nan
+  'Better Than Baseline':
+    - true
+    - true
+    - true
+    - false
+  Model:
+    - mean: -0.0019521824876968365
+      rmse: 0.2123991143283127
+      std: 0.212390142782066
+    - mean: 0.0038069249138608283
+      rmse: 0.15693189787673634
+      std: 0.15688571602888082
+    - mean: -0.057836854310219364
+      rmse: 0.49386350337737056
+      std: 0.49046514478775
+    - mean: .nan
+      rmse: .nan
+      std: .nan
+'Zone Temperatures':
+  HVAC_Zone_Centralzone: 74.0
+  HVAC_Zone_Eastzone: 70.70000000000002
+  HVAC_Zone_Northzone: 73.0
+  HVAC_Zone_Southzone: 76.0
+coefficients:
+  a1: 0.0003708656748741132
+  a2: 1.0
+  bias: -0.007096752219432137
+  t_out: 2.2417732762246082e-05
+  zone_temperature_HVAC_Zone_Centralzone: 0.0005632293967408904
+  zone_temperature_HVAC_Zone_Northzone: -0.00025712602878525553
+  zone_temperature_HVAC_Zone_Southzone: 0.001445831427662805

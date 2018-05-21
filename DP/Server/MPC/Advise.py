@@ -112,9 +112,9 @@ class EVA:
             new_temperature = []
             consumption = []
             for i in range(self.noZones):
-                new_temperature.append(self.th.next_temperature(from_node.temps[i],
-                                                                action[i],
-                                                                from_node.time / self.interval, zone=i))
+                new_temperature.append(self.th.next_temperature(t_in=from_node.temps[i],
+                                                                action=action[i],
+                                                                time=self.get_real_time(from_node.time).hour, zone=i))
                 consumption.append(self.energy.calc_cost(action[i], from_node.time / self.interval))
 
             # create the node that describes the predicted data
@@ -182,7 +182,7 @@ class EVA:
 
 class Advise:
     # the Advise class initializes all the Models and runs the shortest path algorithm
-    def __init__(self, current_time, occupancy_data, zone_temperature, thermal_model, weather_predictions, # don't forget to use weather_pre
+    def __init__(self, current_time, occupancy_data, zone_temperature, thermal_model,
                  prices, lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons,
                  thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
         self.plot = plot_bool

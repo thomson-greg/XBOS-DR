@@ -32,11 +32,14 @@ def hvac_control(cfg, advise_cfg, tstat, client, thermal_model, zone):
         tstat_temp = tstat.temperature
 
         setpoints_array = dataManager.building_setpoints()
+
+        # need to set weather predictions for every loop.
+        thermal_model.setWeahterPredictions(dataManager.weather_fetch())
+
         adv = Advise(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
                      dataManager.preprocess_occ(),
                      [tstat_temp], # assuming we are only working with one zone. should be change if we do multizone.
                      thermal_model,
-                     dataManager.weather_fetch(),
                      dataManager.prices(),
                      advise_cfg["Advise"]["Lambda"],
                      cfg["Interval_Length"],
@@ -153,9 +156,15 @@ if __name__ == '__main__':
 
     starttime = time.time()
 
-    controller_dataManager = ControllerDataManager(cfg, client)
-    # initialize and fit thermal model
-    thermal_data = controller_dataManager.thermal_data()
+    # TODO Uncomment when final
+    # controller_dataManager = ControllerDataManager(cfg, client)
+    # # initialize and fit thermal model
+    # thermal_data = controller_dataManager.thermal_data()
+
+    import pickle
+    with open("zone_thermal_ciee", "r") as f:
+        thermal_data = pickle.load(f)
+
 
     thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"])
     # -------------------
@@ -181,7 +190,7 @@ if __name__ == '__main__':
             tstats[tstat["?zone"]] = Thermostat(client, tstat["?uri"])
 
         # assuming we get here every 15 min.
-        thermal_model.set_zone_temperatures({zone: t.temperature for zone, t in tstats.items()})
+        thermal_model.setZoneTemperatures({zone: t.temperature for zone, t in tstats.items()})
 
         for zone, tstat in tstats.items():
             print
