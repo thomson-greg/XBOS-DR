@@ -70,7 +70,7 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 
 	for i in range(cfg["Thermostat_Write_Tries"]):
 		try:
-			#tstat.write(p)
+			tstat.write(p)
 			break
 		except:
 			if i == cfg["Thermostat_Write_Tries"] - 1:
