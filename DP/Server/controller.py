@@ -54,12 +54,12 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 		print p
 
 	elif action == "1":
-		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": math.floor(temp-0.1)-1, "mode": 3}
+		p = {"override": True, "heating_setpoint": math.ceil(temp+0.1)+1, "cooling_setpoint": cooling_setpoint, "mode": 3}
 		print "Heating"
 		print p
 
 	elif action == "2":
-		p = {"override": True, "heating_setpoint": math.ceil(temp+0.1)+1, "cooling_setpoint": cooling_setpoint, "mode": 3}
+		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": math.floor(temp - 0.1) - 1, "mode": 3}
 		print "Cooling"
 		print p
 
