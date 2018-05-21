@@ -52,9 +52,8 @@ def hvac_control(cfg, advise_cfg, tstat, client, thermal_model, zone):
         action = adv.advise()
 
     except:
-        e = sys.exc_info()[0]
-        print
-        e
+        e = sys.exc_info()
+        print(e)
         return False
 
     heating_setpoint = setpoints_array[0][0]
@@ -193,15 +192,13 @@ if __name__ == '__main__':
         thermal_model.setZoneTemperatures({zone: t.temperature for zone, t in tstats.items()})
 
         for zone, tstat in tstats.items():
-            print
-            tstat
-            thread = ZoneThread(cfg, tstats, zone, client, thermal_model)
+            print(tstat)
+            thread = ZoneThread(cfg, tstats[zone], zone, client, thermal_model)
             thread.start()
             threads.append(thread)
 
         for t in threads:
             t.join()
 
-        print
-        datetime.datetime.now()
+        print(datetime.datetime.now())
         time.sleep(60. * 15. - ((time.time() - starttime) % (60. * 15.)))
