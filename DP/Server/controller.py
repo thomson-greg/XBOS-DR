@@ -28,15 +28,14 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 					 cfg["Interval_Length"],
 					 advise_cfg["Advise"]["Hours"],
 					 advise_cfg["Advise"]["Print_Graph"],
-					 advise_cfg["Advise"]["Maximum_Safety_Temp"],
-					 advise_cfg["Advise"]["Minimum_Safety_Temp"],
 					 advise_cfg["Advise"]["Heating_Consumption"],
 					 advise_cfg["Advise"]["Cooling_Consumption"],
 					 advise_cfg["Advise"]["Max_Actions"],
 					 advise_cfg["Advise"]["Thermal_Precision"],
 					 advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
 					 setpoints_array,
-					 advise_cfg["Advise"]["Sensors"])
+					 advise_cfg["Advise"]["Sensors"],
+					 dataManager.safety_constraints())
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:
@@ -71,7 +70,7 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 
 	for i in range(cfg["Thermostat_Write_Tries"]):
 		try:
-			tstat.write(p)
+			#tstat.write(p)
 			break
 		except:
 			if i == cfg["Thermostat_Write_Tries"] - 1:

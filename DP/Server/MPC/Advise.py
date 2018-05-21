@@ -182,8 +182,7 @@ class EVA:
 class Advise:
 	# the Advise class initializes all the Models and runs the shortest path algorithm
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
-				 prices, lamda, interval, predictions_hours, plot_bool,
-				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
+				 prices, lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons, max_actions,
 				 thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
 
 		self.plot =plot_bool
@@ -253,7 +252,7 @@ if __name__ == '__main__':
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
 				 dm.prices(), 0.995, 15, 1, True,
-				 87, 55, 0.075, 1.25, 400, 400., 4,
+				 0.075, 1.25, 400, 400., 4,
 				 dm.building_setpoints(), advise_cfg["Advise"]["Sensors"], dm.safety_constraints())
 
 	print adv.advise()

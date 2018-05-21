@@ -2,8 +2,6 @@ Advise:
   Print_Graph: False
   Lambda: 0.995
   Hours: 4
-  Maximum_Safety_Temp: 86
-  Minimum_Safety_Temp: 54
   Heating_Consumption: 0.075  # kwatts
   Cooling_Consumption: 1.25  # kwatts
   Max_Actions: 400 #int
