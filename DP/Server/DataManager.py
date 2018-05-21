@@ -304,6 +304,33 @@ class DataManager:
 
 		return setpoints
 
+	def safety_constraints(self):
+		setpoints_array = self.advise_cfg["Advise"]["SafetySetpoints"]
+
+		def in_between(now, start, end):
+			if start < end:
+				return start <= now < end
+			elif end < start:
+				return start <= now or now < end
+			else:
+				return True
+
+		now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
+		setpoints = []
+
+		while now_time <= self.now + timedelta(hours=self.horizon):
+			i = now_time.weekday()
+
+			for j in setpoints_array[i]:
+				if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+							  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+					setpoints.append([j[2], j[3]])
+					break
+
+			now_time += timedelta(minutes=self.interval)
+
+		return setpoints
+
 if __name__ == '__main__':
 
 	with open("config_file.yml", 'r') as ymlfile:
@@ -318,9 +345,18 @@ if __name__ == '__main__':
 		c = get_client()
 
 	dm = DataManager(cfg, advise_cfg, c)
+
+	print "Weather Predictions:"
 	print dm.weather_fetch()
+	print "Thermal Data:"
 	print dm.preprocess_therm()
+	print "Occupancy Data"
 	print dm.preprocess_occ()
+	print "Thermostat Setpoints:"
 	print dm.thermostat_setpoints()
+	print "Prices:"
 	print dm.prices()
+	print "Setpoints for each future interval:"
 	print dm.building_setpoints()
+	print "Safety constraints for each future interval:"
+	print dm.safety_constraints()

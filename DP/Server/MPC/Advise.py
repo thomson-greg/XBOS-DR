@@ -103,7 +103,7 @@ class EVA:
 			return
 
 		# create the action set (0 is for do nothing, 1 is for cooling, 2 is for heating)
-		action_set = self.safety.safety_actions(from_node.temps)
+		action_set = self.safety.safety_actions(from_node.temps, from_node.time/self.interval)
 		
 		# iterate for each available action
 		for action in action_set:
@@ -116,15 +116,15 @@ class EVA:
 																action[i],
 																from_node.time/self.interval, zone=i))
 				consumption.append(self.energy.calc_cost(action[i], from_node.time/self.interval))
-				
-			if self.safety.safety_check(new_temperature) and len(action_set) > 1:
-				continue
 
 			# create the node that describes the predicted data
 			new_node = Node(
 				temps=new_temperature,
 				time=from_node.time + self.interval
 			)
+
+			if self.safety.safety_check(new_temperature, new_node.time/self.interval) and len(action_set) > 1:
+				continue
 
 			# calculate interval discomfort
 			discomfort = [0] * self.noZones
@@ -184,7 +184,7 @@ class Advise:
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
 				 prices, lamda, interval, predictions_hours, plot_bool,
 				 max_safe_temp, min_safe_temp, heating_cons, cooling_cons, max_actions,
-				 thermal_precision, occ_obs_len_addition, setpoints, sensors):
+				 thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
 
 		self.plot =plot_bool
 		self.current_time = current_time
@@ -194,7 +194,7 @@ class Advise:
 		th = ThermalModel(thermal_data, weather_predictions, now=self.current_time, interval_length=interval,
 						  max_actions=max_actions, thermal_precision=thermal_precision)
 		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition, sensors)
-		safety = Safety(max_temperature=max_safe_temp, min_temperature=min_safe_temp, noZones=1)
+		safety = Safety(safety_constraints, noZones=1)
 		energy = EnergyConsumption(prices, interval, now=self.current_time,
 								   heat=heating_cons, cool=cooling_cons)
 		
@@ -252,9 +252,9 @@ if __name__ == '__main__':
 
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),
-				 dm.prices(), 0.995, 15, 1, False,
+				 dm.prices(), 0.995, 15, 1, True,
 				 87, 55, 0.075, 1.25, 400, 400., 4,
-				 dm.building_setpoints(), advise_cfg["Advise"]["Sensors"])
+				 dm.building_setpoints(), advise_cfg["Advise"]["Sensors"], dm.safety_constraints())
 
 	print adv.advise()
 	

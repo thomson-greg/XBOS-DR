@@ -15,21 +15,20 @@ class Safety:
 	# this is the module that generates all the possible combinations of heating/cooling/do nothing actions
 	"""
 	# TODO make this work for more than 3 actions?
-	def __init__(self, max_temperature=86, min_temperature=54, noZones = 1):
-		self.max_temperature = max_temperature
-		self.min_temperature = min_temperature
+	def __init__(self,safety_constraints, noZones = 1):
+		self.safety_constraints = safety_constraints
 		self.noZones = noZones
 
-	def safety_actions(self, temps):
+	def safety_actions(self, temps, time):
 		"""
 		Calculate a string of all the available actions according to the safety setpoints
 		Could work for N zones
 		"""
 		nonSafe = []
 		for i in range(1, self.noZones+1):
-			if temps[i-1] > self.max_temperature: 
+			if temps[i-1] > self.safety_constraints[time][1]:
 				nonSafe.append(i)
-			elif temps[i-1] < self.min_temperature:
+			elif temps[i-1] < self.safety_constraints[time][0]:
 				nonSafe.append(-i)
 		actions = [toBase(i, 3).zfill(self.noZones) for i in range(3**self.noZones)]
 		for i in nonSafe:
@@ -49,13 +48,13 @@ class Safety:
 				actions = list(set(actions))
 		return actions
 
-	def safety_check(self, temp):
+	def safety_check(self, temp, time):
 		"""
 		Check if a temp is withing the safety limits
 		"""
 		flag = False
 		for i in range(self.noZones):
-			if temp[i] > self.max_temperature or temp[i] < self.min_temperature:
+			if temp[i] > self.safety_constraints[time][1] or temp[i] < self.safety_constraints[time][0]:
 				flag = True
 
 		return flag
