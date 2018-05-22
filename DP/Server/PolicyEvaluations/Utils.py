@@ -72,6 +72,7 @@ def data_fetch(cfg, cli, zones):
 		df_th = df.rename(
 			columns={UUIDS[zone][0]: 'State', UUIDS[zone][1]: 'Tin', UUIDS[zone][2]: 'Tout', UUIDS[zone][3]: "STPH",
 					 UUIDS[zone][4]: "STPL"})
+		df_th['change_of_action'] = (df_th['State'].diff(1) != 0).astype('int').cumsum()
 
 		c = mdal.MDALClient("xbos/mdal", client=cli)
 		dfs = c.do_query({'Composition': query_list,
