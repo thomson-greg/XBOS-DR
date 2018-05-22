@@ -5,7 +5,8 @@ import pickle
 
 
 ########## Init Data
-with open ('CentralZone_baseline_extended.pckl', 'rb') as fp:
+method = "CentralZone_baseline.pckl"
+with open (method, 'rb') as fp:
     return_dict = pickle.load(fp)
 
 OPs = [i for i in return_dict["OPs"]]
@@ -140,4 +141,4 @@ def PlotDay(OPs, Tins, Policy, TinsUP, TinsDOWN, Costs, Prices, Discomforts, met
 	return 1
 
 
-PlotDay(OPs, Tins, Policy, TinsUP, TinsDOWN, Costs, Prices, Discomforts)
+PlotDay(OPs, Tins, Policy, TinsUP, TinsDOWN, Costs, Prices, Discomforts, method)
