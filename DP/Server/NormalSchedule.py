@@ -1,4 +1,5 @@
 import datetime, pytz, sys
+from DataManager import DataManager
 
 # TODO DR EVENT needs fixing
 
@@ -30,20 +31,24 @@ class NormalSchedule:
 				SetpointHigh = j[3]
 				break
 
+		dataManager = DataManager(self.cfg, self.advise_cfg, None, now=self.now)
+		Safety_temps = dataManager.safety_constraints()
+
 		if not isinstance(SetpointLow, (int, float, long)):
-			SetpointLow = self.advise_cfg["Advise"]["Minimum_Safety_Temp"]
+			SetpointLow = Safety_temps[0][0]
 		if not isinstance(SetpointHigh, (int, float, long)):
-			SetpointHigh = self.advise_cfg["Advise"]["Maximum_Safety_Temp"]
+			SetpointHigh = Safety_temps[0][1]
 
 		if self.cfg["Pricing"]["DR"] or self.now.weekday() == 4: #TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
 			SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]/100.*SetpointHigh
 			SetpointLow += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
 
-
-		SetpointHigh = SetpointHigh if SetpointHigh < self.advise_cfg["Advise"]["Maximum_Safety_Temp"] \
-			else self.advise_cfg["Advise"]["Maximum_Safety_Temp"]
-		SetpointLow = SetpointLow if SetpointLow > self.advise_cfg["Advise"]["Minimum_Safety_Temp"] \
-			else self.advise_cfg["Advise"]["Minimum_Safety_Temp"]
+		if SetpointLow < Safety_temps[0][0]:
+			SetpointLow = Safety_temps[0][0]
+			SetpointHigh = SetpointLow + self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+		elif SetpointHigh > Safety_temps[0][1]:
+			SetpointHigh = Safety_temps[0][1]
+			SetpointLow = SetpointHigh - self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]
 
 		p = {"override": True, "heating_setpoint": SetpointLow, "cooling_setpoint": SetpointHigh, "mode": 3}
 

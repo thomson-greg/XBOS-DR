@@ -37,7 +37,7 @@ class DataManager:
 		"""
 
 		if self.advise_cfg["Advise"]["Sensors"]:
-			hod = HodClient(self.controller_cfg["Building"]+"/hod", self.c)
+			hod = HodClient(self.controller_cfg["Building"]+"/hod", self.c) #TODO MAKE THIS WORK WITH FROM AND xbos/hod, FOR SOME REASON IT DOES NOT
 
 			occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 			  ?sensor rdf:type brick:Occupancy_Sensor .

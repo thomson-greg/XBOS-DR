@@ -14,8 +14,7 @@ class Safety:
 	"""
 	# this is the module that generates all the possible combinations of heating/cooling/do nothing actions
 	"""
-	# TODO make this work for more than 3 actions?
-	def __init__(self,safety_constraints, noZones = 1):
+	def __init__(self, safety_constraints, noZones = 1):
 		self.safety_constraints = safety_constraints
 		self.noZones = noZones
 
@@ -30,7 +29,7 @@ class Safety:
 				nonSafe.append(i)
 			elif temps[i-1] < self.safety_constraints[time][0]:
 				nonSafe.append(-i)
-		actions = [toBase(i, 3).zfill(self.noZones) for i in range(3**self.noZones)]
+		actions = [toBase(i, 3).zfill(self.noZones) for i in range(3**self.noZones)] # change the 3 in toBase() for more actions
 		for i in nonSafe:
 			if i >= 0:
 				actions = list(filter(lambda x: x[i-1] == '1', actions))

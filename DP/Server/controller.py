@@ -18,7 +18,7 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 	try:
 		dataManager = DataManager(cfg, advise_cfg, client, now=now)
 		Prep_Therm = dataManager.preprocess_therm()
-		setpoints_array = dataManager.building_setpoints()
+		safety_constraints = dataManager.safety_constraints()
 		adv = Advise(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
 					 dataManager.preprocess_occ(),
 					 Prep_Therm,
@@ -33,9 +33,9 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 					 advise_cfg["Advise"]["Max_Actions"],
 					 advise_cfg["Advise"]["Thermal_Precision"],
 					 advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
-					 setpoints_array,
+					 dataManager.building_setpoints(),
 					 advise_cfg["Advise"]["Sensors"],
-					 dataManager.safety_constraints())
+					 safety_constraints)
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
 	except:
@@ -44,21 +44,39 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 		return False
 
 
-	heating_setpoint = setpoints_array[0][0]
-	cooling_setpoint = setpoints_array[0][1]
 	# action "0" is Do Nothing, action "1" is Cooling, action "2" is Heating
 	if action == "0":
-		p = {"override": True, "heating_setpoint": math.floor(temp-0.1)-1, "cooling_setpoint": math.ceil(temp+0.1)+1, "mode": 3}
+		heating_setpoint = math.floor(temp-0.1) - advise_cfg["Advise"]["Minimum_Comfortband_Height"] /2.
+		cooling_setpoint = math.ceil(temp+0.1) + advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
+		if heating_setpoint < safety_constraints[0][0]:
+			heating_setpoint = safety_constraints[0][0]
+			cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+		elif cooling_setpoint > safety_constraints[0][1]:
+			cooling_setpoint = safety_constraints[0][1]
+			heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
 		print "Doing nothing"
 		print p
 
 	elif action == "1":
-		p = {"override": True, "heating_setpoint": math.ceil(temp+0.1)+1, "cooling_setpoint": cooling_setpoint, "mode": 3}
+		heating_setpoint = math.ceil(temp+0.1) + advise_cfg["Advise"]["Hysterisis"]
+		cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+		if cooling_setpoint > safety_constraints[0][1]:
+			cooling_setpoint = safety_constraints[0][1]
+			heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
 		print "Heating"
 		print p
 
 	elif action == "2":
-		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": math.floor(temp - 0.1) - 1, "mode": 3}
+		cooling_setpoint = math.floor(temp - 0.1) - advise_cfg["Advise"]["Hysterisis"]
+		heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+		if heating_setpoint < safety_constraints[0][0]:
+			heating_setpoint = safety_constraints[0][0]
+			cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+		p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
 		print "Cooling"
 		print p
 
