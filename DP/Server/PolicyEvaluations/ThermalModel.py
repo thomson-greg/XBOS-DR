@@ -5,13 +5,12 @@ from scipy.optimize import curve_fit
 # daniel imports
 from sklearn.base import BaseEstimator, RegressorMixin
 
+import yaml
+import pyaml
+
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    # keeping track of all the rmse's computed with this class.
-    trivial_rmse = []
-    rmse = []
-    scoreTypeList = []  # to know which action each rmse belongs to.
 
     def __init__(self, scoreType=-1):
         '''
@@ -19,10 +18,19 @@ class ThermalModel(BaseEstimator, RegressorMixin):
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
                         1 heating, 2 cooling.
         '''
-        self.scoreType = scoreType
+        self.scoreType = scoreType # instance variable because of how cross validation works with sklearn
 
         self._params = None
         self._params_order = None
+
+
+        # NOTE: if wanting to use cross validation, put these as class variables. Also, change in score, e.g. self.model_error to ThermalModel.model_error
+        # keeping track of all the rmse's computed with this class.
+        # first four values are always the training data errors.
+        self.baseline_error = []
+        self.model_error = []
+        self.scoreTypeList = []  # to know which action each rmse belongs to.
+        self.betterThanBaseline = []
 
     # thermal model function
     def _func(self, X, *coeff):
@@ -34,8 +42,12 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         c1, c2, c3, c4, c_rest = coeff[0], coeff[1], coeff[2], coeff[3], coeff[4:]
 
-        return Tin + (c1 * a1 * Tin + c2 * a2 * Tin + c3 * (Tout - Tin) + c4 +
-                      sum([c * (zone_temp - Tin) for c, zone_temp in zip(c_rest, zone_temperatures)])) * dt
+        first_half = c1 * a1 * Tin + c2 * a2 * Tin + c3 * (Tout - Tin) + c4
+        second_half = 0
+        for c, zone_temp in zip(c_rest, zone_temperatures):
+            diff = zone_temp - Tin
+            second_half += c * diff
+        return Tin + (first_half + second_half) * dt
 
     def fit(self, X, y=None):
         """Needs to be called to fit the model. Will set self._params to coefficients. 
@@ -46,12 +58,17 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         zone_col = X.columns[["zone_temperature_" in col for col in X.columns]]
         filter_columns = ['t_in', 'a1', 'a2', 't_out', 'dt'] + list(zone_col)
 
-        #give mapping from params to coefficients
+        # give mapping from params to coefficients
         self._params_order = filter_columns
 
         popt, pcov = curve_fit(self._func, X[filter_columns].T.as_matrix(), y.as_matrix(),
-                               p0=np.ones(len(self._params_order)))  # fit the data. we start our guess with all ones for coefficients. Need to do so to be able to generalize to variable number of zones.
+                               p0=np.ones(len(
+                                   self._params_order)))  # fit the data. we start our guess with all ones for coefficients. Need to do so to be able to generalize to variable number of zones.
         self._params = popt
+        # score training data
+        for action in range(-1, 3):
+            self.score(X, y, scoreType=action)
+        #--------------------
         return self
 
     def predict(self, X, y=None):
@@ -71,21 +88,28 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         return res
 
-    def _normalizedRMSE(self, dt, prediction, y):
+    def _normalizedRMSE_STD(self, dt, prediction, y):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.'''
         diff = prediction - y
         diff_scaled = diff * 15. / dt  # to offset for actions which were less than 15 min. makes everything a lot worse
+        mean_error = np.mean(diff_scaled)
         rmse = np.sqrt(np.mean(np.square(diff_scaled)))
-        return rmse
+        # standard deviation of the error
+        diff_std = np.sqrt(np.mean(np.square(diff_scaled - mean_error)))
+        return mean_error, rmse, diff_std
 
-    def score(self, X, y, sample_weight=None):
+    def score(self, X, y, sample_weight=None, scoreType = None):
         """Scores the model on the dataset given by X and y."""
-        ThermalModel.scoreTypeList.append(self.scoreType)  # filter by the action we want to score by
-        if self.scoreType == 0:
+        if scoreType is None:
+            scoreType = self.scoreType
+        assert scoreType in list(range(-1, 4))
+
+        self.scoreTypeList.append(scoreType)  # filter by the action we want to score by
+        if scoreType == 0:
             filter_arr = (X['a1'] == 0) & (X['a2'] == 0)
-        elif self.scoreType == 1:
+        elif scoreType == 1:
             filter_arr = X['a1'] == 1
-        elif self.scoreType == 2:
+        elif scoreType == 2:
             filter_arr = X['a2'] == 1
         else:
             filter_arr = np.ones(X['a1'].shape) == 1
@@ -95,16 +119,20 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         prediction = self.predict(X)  # only need to predict for relevant actions
 
-        rmse = self._normalizedRMSE(X['dt'], prediction, y)
+        mean_error, rmse, std = self._normalizedRMSE_STD(X['dt'], prediction, y)
 
         # add model RMSE for reference.
-        ThermalModel.rmse.append(rmse)
+        self.model_error.append({"mean": mean_error, "rmse": rmse, "std": std})
 
         # add trivial error for reference.
-        trivial_rmse = self._normalizedRMSE(X['dt'], X['t_in'], y)
-        ThermalModel.trivial_rmse.append(trivial_rmse)
+        trivial_mean_error, trivial_rmse, trivial_std = self._normalizedRMSE_STD(X['dt'], X['t_in'], y)
+        self.baseline_error.append({"mean": trivial_mean_error, "rmse": trivial_rmse, "std": trivial_std})
+
+        # to keep track of whether we are better than the baseline/trivial
+        self.betterThanBaseline.append(trivial_rmse > rmse)
 
         return rmse
+
 
 class MPCThermalModel:
     def __init__(self, thermal_data, interval_length):
@@ -117,10 +145,14 @@ class MPCThermalModel:
         :param thermal_precision: 
         """
         self.zoneThermalModels = self.fit_zones(thermal_data)
-        self.interval = interval_length # new for predictions. Will be fixed right?
+        self.interval = interval_length  # new for predictions. Will be fixed right?
         # TODO Make sure data starts now i guess? do we really care? We do need the current temperature though so we can keep constant throughout zones.
-        self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in thermal_data.items()} # we will keep the temperatures constant throughout the MPC as an approximation.
+        self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in
+                                 thermal_data.items()}  # we will keep the temperatures constant throughout the MPC as an approximation.
 
+    def set_zone_temperatures(self, zone_temps):
+        # store curr temperature for every zone. Call whenever we are starting new interval.
+        self.zoneTemperatures = zone_temps
 
     def fit_zones(self, data):
         """Assigns a thermal model to each zone.
@@ -130,28 +162,59 @@ class MPCThermalModel:
             zoneModels[zone] = ThermalModel().fit(val, val["t_next"])
         return zoneModels
 
-    def predict(self, temperature, zone, action, outside_temperature):
+    def predict(self, temperature, zone, action, outside_temperature, interval=None):
         """Predicts temperature for zone given."""
-        X = {"dt":self.interval, "t_in": temperature, "a1": int(0<action<=1), "a2": int(1<action<=2) , "t_out": outside_temperature}
+        if interval is None:
+            interval = self.interval
+        X = {"dt": interval, "t_in": temperature, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
+             "t_out": outside_temperature}
         for key_zone, val in self.zoneTemperatures.items():
             if key_zone != zone:
-                X["zone_temperature_"+key_zone] = val
+                X["zone_temperature_" + key_zone] = val
 
         return self.zoneThermalModels[zone].predict(pd.DataFrame(X, index=[0]))
+
+    def save_to_config(self):
+        """saves the whole model to a yaml file."""
+        config_dict = {}
+        # store zone temperatures
+        config_dict["Zone Temperatures"] = self.zoneTemperatures
+        for zone in self.zoneThermalModels.keys():
+            config_dict[zone] = {}
+            zone_thermal_model = self.zoneThermalModels[zone]
+            # store coefficients
+            coefficients = {parameter_name: param for parameter_name, param in zip(zone_thermal_model._params_order, zone_thermal_model._params)}
+            config_dict[zone]["coefficients"] = coefficients
+            # store evaluations and RMSE's.
+            config_dict[zone]["Evaluations"] = {}
+            config_dict[zone]["Evaluations"]["Baseline"] = zone_thermal_model.baseline_error
+            config_dict[zone]["Evaluations"]["Model"] = zone_thermal_model.model_error
+            config_dict[zone]["Evaluations"]["ActionOrder"] = zone_thermal_model.scoreTypeList
+            config_dict[zone]["Evaluations"]["Better Than Baseline"] = zone_thermal_model.betterThanBaseline
+
+
+        with open("config_ThermalModel", 'wb') as ymlfile:
+            pyaml.dump(config_dict, ymlfile)
+
+
+
+
+
 
 
 if __name__ == '__main__':
     import pickle
+
     therm_data_file = open("zone_thermal_ciee")
     therm_data = pickle.load(therm_data_file)
-    
-    print [i for i in therm_data]
+
+    therm_data_file.close()
 
     mpcThermalModel = MPCThermalModel(therm_data, 15)
-
-    print(mpcThermalModel.predict(70, "HVAC_Zone_Centralzone", 2, 70))
+    #mpcThermalModel.save_to_config()
+    print mpcThermalModel.zoneTemperatures
+    print(mpcThermalModel.predict(70, "HVAC_Zone_Centralzone", 0, 70))
     #
     # thermal_model = open("thermal_model", "wb")
     # pickle.dump(mpcThermalModel, thermal_model)
     # thermal_model.close()
-

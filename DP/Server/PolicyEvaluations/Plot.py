@@ -5,17 +5,17 @@ import pickle
 
 
 ########## Init Data
-with open ('CentralZone_b.pckl', 'rb') as fp:
+with open ('CentralZone_baseline_extended.pckl', 'rb') as fp:
     return_dict = pickle.load(fp)
 
-OPs = [i for i in return_dict["occupancy"]]
-Tins = [i for i in return_dict["temperature"]]
-Policy = [i for i in return_dict["action"]]
-TinsUP = [i for i in return_dict["cooling_stp"]]
-TinsDOWN = [i for i in return_dict["heating_stp"]]
-Costs = [i for i in return_dict["cost"]]#[sum(return_dict["cost"][:i]) for i in range(1, len(return_dict["cost"])+1)]
-Prices = [i for i in return_dict["price"]]
-Discomforts = [i for i in return_dict["discomfort"]]#sum(return_dict['discomfort'])
+OPs = [i for i in return_dict["OPs"]]
+Tins = [i for i in return_dict["Tins"]]
+Policy = [i for i in return_dict["Policy"]]
+TinsUP = [i for i in return_dict["TinsUP"]]
+TinsDOWN = [i for i in return_dict["TinsDOWN"]]
+Costs = [i for i in return_dict["Costs"]]#[sum(return_dict["cost"][:i]) for i in range(1, len(return_dict["cost"])+1)]
+Prices = [i for i in return_dict["Prices"]]
+Discomforts = [i for i in return_dict["Discomforts"]]#sum(return_dict['discomfort'])
 ##############################################
 
 

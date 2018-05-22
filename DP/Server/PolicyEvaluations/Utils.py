@@ -97,7 +97,7 @@ def data_fetch(cfg, cli, zones):
 	return dataframes
 
 
-def policy_to_minute(policy, now):
+def policy_per_minute(policy, now):
 
 	now_time = now
 	setpoints = []
@@ -113,6 +113,38 @@ def policy_to_minute(policy, now):
 		now_time += timedelta(minutes=1)
 
 	return setpoints[:-1]
+
+def policy_per_minute_expanded(policy, now, DRs, expand_percent):
+
+	now_time = now
+	setpoints = []
+
+	while now_time <= now + timedelta(hours=24):
+		i = 0 if now_time.weekday() < 5 else 1
+
+		flag = False
+		for dr in DRs:
+			if in_between(now_time.time(), datetime.time(int(dr[1].split(":")[0]), int(dr[1].split(":")[1])),
+						  datetime.time(int(dr[2].split(":")[0]), int(dr[2].split(":")[1]))) and \
+					(now_time.date() == datetime.datetime.strptime(dr[0], "%Y-%m-%d").date()):
+				flag = True
+				break
+
+
+
+		for j in policy[i]:
+
+			if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+						  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+				if flag:
+					setpoints.append([j[2] - expand_percent / 100. * j[2], j[3] + expand_percent / 100. * j[3]])
+				else:
+					setpoints.append([j[2], j[3]])
+				break
+
+		now_time += timedelta(minutes=1)
+	return setpoints[:-1]
+
 
 def prices_per_minute(price_array, now, DRs):
 	now_time = now
@@ -155,9 +187,10 @@ def discomfort(STPH, STPL, Tin, Occ):
 		return discomfort * Occ
 
 def action(STPH, STPL, Tin):
-	if Tin < STPL:
+	hysterisis = 1
+	if Tin < STPL-hysterisis:
 		return 1.
-	elif Tin > STPH:
+	elif Tin > STPH+hysterisis:
 		return 2.
 	else:
 		return 0.

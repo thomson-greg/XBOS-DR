@@ -7,154 +7,177 @@ import pickle
 from ThermalModel import MPCThermalModel
 therm_data_file = open("zone_thermal_ciee")
 therm_data = pickle.load(therm_data_file)
-mpcThermalModel = MPCThermalModel(therm_data, 1)
 
-def baseline(data, policy_array, prices_array, zones, kwh):
+train = False
+if train:
+	mpcThermalModel = MPCThermalModel(therm_data, 1)
+	mpcThermalModelFILE = open("mpcThermalModel", 'wb')
+	pickle.dump(mpcThermalModel, mpcThermalModelFILE)
+	mpcThermalModelFILE.close()
 
+
+mpcThermalModelFILE = open("mpcThermalModel")
+mpcThermalModel = pickle.load(mpcThermalModelFILE)
+mpcThermalModelFILE.close()
+
+def baseline(data, policy_array, prices_array, zones, kwh, string_extension):
+
+	dictionary = {}
 	for zone in zones:
-		OPs = []  # [i[0] for i in return_dict["occupancy"]]
-		Tins = []  # [i for i in return_dict["temperature"]]
-		Policy = []  # [i for i in return_dict["action"]]
-		TinsUP = []  # [i for i in return_dict["cooling_stp"]]
-		TinsDOWN = []  # [i for i in return_dict["heating_stp"]]
-		Costs = []  # [i for i in return_dict["cost"]]#[sum(return_dict["cost"][:i]) for i in range(1, len(return_dict["cost"])+1)]
-		Prices = []  # [i for i in return_dict["price"]]
-		Discomforts = []  # [i for i in return_dict["discomfort"]]
+		dictionary[zone] = {}
+		dictionary[zone]["OPs"] =[]
+		dictionary[zone]["Tins"] = []
+		dictionary[zone]["Policy"] = []
+		dictionary[zone]["TinsUP"] = []
+		dictionary[zone]["TinsDOWN"] = []
+		dictionary[zone]["Costs"] = []
+		dictionary[zone]["Prices"] = []
+		dictionary[zone]["Discomforts"] = []
 
-		tnext = data[zone]["Tin"][0]
+	Tnext = {}
+	for zone in zones:
+		Tnext[zone] = data[zone]["Tin"][0]
 
-		for i, policy in enumerate(policy_array):
-			STPH = policy[1]
-			STPL = policy[0]
-			price = prices_array[i]
-			tin = tnext
+	for i, policy in enumerate(policy_array):
+		STPH = policy[1]  # same policy for all zones (TODO: FIX THAT)
+		STPL = policy[0]  # same policy for all zones (TODO: FIX THAT)
+		Tin = Tnext.copy()
+
+		zone_temps_for_setter = {}
+		for zone in zones:
+			zone_temps_for_setter["HVAC_Zone_"+zone.lower().capitalize()] = Tin[zone]
+		mpcThermalModel.set_zone_temperatures(zone_temps_for_setter)
+
+		for zone in zones:
+
 			tout = data[zone]["Tout"][i]
 			occ = data[zone]["Occ"][i]
-			action = Utils.action(STPH, STPL, tin)
+
+			action = Utils.action(STPH, STPL, Tin[zone])
+			price = prices_array[i]
 			cost = Utils.cost(action, price, *kwh[zone])
-			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
+			discomfort = Utils.discomfort(STPH, STPL, Tin[zone], occ)
 
-			other_zones = []
-			for z in [z for z in zones if z != zone]:
-				other_zones.append(data[z]["Tin"][i])
 
-			tnext = mpcThermalModel.predict(tin, "HVAC_Zone_"+zone.lower().capitalize(), action, tout)[0]#Utils.T_next([tin, action, tout, 1, other_zones], *popts)
+			Tnext[zone] = mpcThermalModel.predict(Tin[zone],  "HVAC_Zone_"+zone.lower().capitalize(), action, tout)[0]
 
-			OPs.append(occ)
-			Tins.append(tin)
-			Policy.append(action)
-			TinsUP.append(STPH)
-			TinsDOWN.append(STPL)
-			Costs.append(cost)
-			Prices.append(price)
-			Discomforts.append(discomfort)
-
-		return_dict = {}
-		return_dict["occupancy"] = OPs
-		return_dict["discomfort"] = Discomforts
-		return_dict["cost"] = Costs
-		return_dict["temperature"] = Tins
-		return_dict["action"] = Policy
-		return_dict["price"] = Prices
-		return_dict["heating_stp"] = TinsDOWN
-		return_dict["cooling_stp"] = TinsUP
-		with open( zone +'_b.pckl', 'wb') as fp:
-			pickle.dump(return_dict, fp)
-
-def reality(data, policy_array, prices_array, zones, kwh):
+			dictionary[zone]["OPs"].append(occ)
+			dictionary[zone]["Tins"].append(Tin[zone])
+			dictionary[zone]["Policy"].append(action)
+			dictionary[zone]["TinsUP"].append(STPH)
+			dictionary[zone]["TinsDOWN"].append(STPL)
+			dictionary[zone]["Costs"].append(cost)
+			dictionary[zone]["Prices"].append(price)
+			dictionary[zone]["Discomforts"].append(discomfort)
 
 	for zone in zones:
-		OPs = []  # [i[0] for i in return_dict["occupancy"]]
-		Tins = []  # [i for i in return_dict["temperature"]]
-		Policy = []  # [i for i in return_dict["action"]]
-		TinsUP = []  # [i for i in return_dict["cooling_stp"]]
-		TinsDOWN = []  # [i for i in return_dict["heating_stp"]]
-		Costs = []  # [i for i in return_dict["cost"]]#[sum(return_dict["cost"][:i]) for i in range(1, len(return_dict["cost"])+1)]
-		Prices = []  # [i for i in return_dict["price"]]
-		Discomforts = []  # [i for i in return_dict["discomfort"]]
+		with open(zone + '_'+string_extension+'.pckl', 'wb') as fp:
+			pickle.dump(dictionary[zone], fp)
+
+def reality(data, policy_array, prices_array, zones, kwh, string_extension):
 
 
-		for i, policy in enumerate(policy_array):
-			STPH = policy[1]
-			STPL = policy[0]
-			price = prices_array[i]
-			tin = data[zone]["Tin"][i]
+	dictionary = {}
+	for zone in zones:
+		dictionary[zone] = {}
+		dictionary[zone]["OPs"] = []
+		dictionary[zone]["Tins"] = []
+		dictionary[zone]["Policy"] = []
+		dictionary[zone]["TinsUP"] = []
+		dictionary[zone]["TinsDOWN"] = []
+		dictionary[zone]["Costs"] = []
+		dictionary[zone]["Prices"] = []
+		dictionary[zone]["Discomforts"] = []
+		dictionary[zone]["Real_Setpoints_High"] = []
+		dictionary[zone]["Real_Setpoints_Low"] = []
+
+
+	for i, policy in enumerate(policy_array):
+		STPH = policy[1]  # same policy for all zones (TODO: FIX THAT)
+		STPL = policy[0]  # same policy for all zones (TODO: FIX THAT)
+		Tin = {}
+		for zone in zones:
+			Tin[zone] = data[zone]["Tin"][i]
+
+		for zone in zones:
 			occ = data[zone]["Occ"][i]
 			action = data[zone]["State"][i]
-			cost = Utils.cost(action, price, *kwh[zone])
-			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
-
-			OPs.append(occ)
-			Tins.append(tin)
-			Policy.append(action)
-			TinsUP.append(STPH)
-			TinsDOWN.append(STPL)
-			Costs.append(cost)
-			Prices.append(price)
-			Discomforts.append(discomfort)
-
-		return_dict = {}
-		return_dict["occupancy"] = OPs
-		return_dict["discomfort"] = Discomforts
-		return_dict["cost"] = Costs
-		return_dict["temperature"] = Tins
-		return_dict["action"] = Policy
-		return_dict["price"] = Prices
-		return_dict["heating_stp"] = TinsDOWN
-		return_dict["cooling_stp"] = TinsUP
-		with open( zone +'_r.pckl', 'wb') as fp:
-			pickle.dump(return_dict, fp)
-
-def relive(data, policy_array, prices_array, zones, kwh):
-	for zone in zones:
-		OPs = []  # [i[0] for i in return_dict["occupancy"]]
-		Tins = []  # [i for i in return_dict["temperature"]]
-		Policy = []  # [i for i in return_dict["action"]]
-		TinsUP = []  # [i for i in return_dict["cooling_stp"]]
-		TinsDOWN = []  # [i for i in return_dict["heating_stp"]]
-		Costs = []  # [i for i in return_dict["cost"]]#[sum(return_dict["cost"][:i]) for i in range(1, len(return_dict["cost"])+1)]
-		Prices = []  # [i for i in return_dict["price"]]
-		Discomforts = []  # [i for i in return_dict["discomfort"]]
-
-		tnext = data[zone]["Tin"][0]
-
-		for i, policy in enumerate(policy_array):
-			STPH = policy[1]
-			STPL = policy[0]
 			price = prices_array[i]
-			tin = tnext
+			cost = Utils.cost(action, price, *kwh[zone])
+			discomfort = Utils.discomfort(STPH, STPL, Tin[zone], occ)
+
+
+			dictionary[zone]["OPs"].append(occ)
+			dictionary[zone]["Tins"].append(Tin[zone])
+			dictionary[zone]["Policy"].append(action)
+			dictionary[zone]["TinsUP"].append(STPH)
+			dictionary[zone]["TinsDOWN"].append(STPL)
+			dictionary[zone]["Costs"].append(cost)
+			dictionary[zone]["Prices"].append(price)
+			dictionary[zone]["Discomforts"].append(discomfort)
+			dictionary[zone]["Real_Setpoints_High"].append(data[zone]["STPH"][i])
+			dictionary[zone]["Real_Setpoints_Low"].append(data[zone]["STPL"][i])
+
+	for zone in zones:
+		with open(zone + '_' + string_extension + '.pckl', 'wb') as fp:
+			pickle.dump(dictionary[zone], fp)
+
+
+def relive(data, policy_array, prices_array, zones, kwh, string_extension):
+	data = data.copy()
+	dictionary = {}
+	for zone in zones:
+		dictionary[zone] = {}
+		dictionary[zone]["OPs"] = []
+		dictionary[zone]["Tins"] = []
+		dictionary[zone]["Policy"] = []
+		dictionary[zone]["TinsUP"] = []
+		dictionary[zone]["TinsDOWN"] = []
+		dictionary[zone]["Costs"] = []
+		dictionary[zone]["Prices"] = []
+		dictionary[zone]["Discomforts"] = []
+		dictionary[zone]["Real_Setpoints_High"] = []
+		dictionary[zone]["Real_Setpoints_Low"] = []
+
+	Tnext = {}
+	for zone in zones:
+		Tnext[zone] = data[zone]["Tin"][0]
+
+	for i, policy in enumerate(policy_array):
+		STPH = policy[1]  # same policy for all zones (TODO: FIX THAT)
+		STPL = policy[0]  # same policy for all zones (TODO: FIX THAT)
+		Tin = Tnext.copy()
+
+		zone_temps_for_setter = {}
+		for zone in zones:
+			zone_temps_for_setter["HVAC_Zone_" + zone.lower().capitalize()] = Tin[zone]
+		mpcThermalModel.set_zone_temperatures(zone_temps_for_setter)
+
+		for zone in zones:
 			tout = data[zone]["Tout"][i]
 			occ = data[zone]["Occ"][i]
+
 			action = data[zone]["State"][i]
+			price = prices_array[i]
 			cost = Utils.cost(action, price, *kwh[zone])
-			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
+			discomfort = Utils.discomfort(STPH, STPL, Tin[zone], occ)
 
-			other_zones = []
-			for z in [z for z in zones if z != zone]:
-				other_zones.append(data[z]["Tin"][i])
+			Tnext[zone] = mpcThermalModel.predict(Tin[zone], "HVAC_Zone_" + zone.lower().capitalize(), action, tout)[0]
 
-			tnext = mpcThermalModel.predict(tin, "HVAC_Zone_"+zone.lower().capitalize(), action, tout)[0]#Utils.T_next([tin, action, tout, 1, other_zones], *popts)
+			dictionary[zone]["OPs"].append(occ)
+			dictionary[zone]["Tins"].append(Tin[zone])
+			dictionary[zone]["Policy"].append(action)
+			dictionary[zone]["TinsUP"].append(STPH)
+			dictionary[zone]["TinsDOWN"].append(STPL)
+			dictionary[zone]["Costs"].append(cost)
+			dictionary[zone]["Prices"].append(price)
+			dictionary[zone]["Discomforts"].append(discomfort)
+			dictionary[zone]["Real_Setpoints_High"].append(data[zone]["STPH"][i])
+			dictionary[zone]["Real_Setpoints_Low"].append(data[zone]["STPL"][i])
 
-			OPs.append(occ)
-			Tins.append(tin)
-			Policy.append(action)
-			TinsUP.append(STPH)
-			TinsDOWN.append(STPL)
-			Costs.append(cost)
-			Prices.append(price)
-			Discomforts.append(discomfort)
-
-		return_dict = {}
-		return_dict["occupancy"] = OPs
-		return_dict["discomfort"] = Discomforts
-		return_dict["cost"] = Costs
-		return_dict["temperature"] = Tins
-		return_dict["action"] = Policy
-		return_dict["price"] = Prices
-		return_dict["heating_stp"] = TinsDOWN
-		return_dict["cooling_stp"] = TinsUP
-		with open( zone +'_rl.pckl', 'wb') as fp:
-			pickle.dump(return_dict, fp)
+	for zone in zones:
+		with open(zone + '_' + string_extension + '.pckl', 'wb') as fp:
+			pickle.dump(dictionary[zone], fp)
 
 with open("cost_config.yml", 'r') as ymlfile:
 	cfg = yaml.load(ymlfile)
@@ -166,7 +189,6 @@ else:
 
 zones = cfg["Zones"]
 
-
 popts = cfg["popts"]
 kwh = {}
 for i in zones:
@@ -177,8 +199,11 @@ for i in zones:
 
 uspac = pytz.timezone(cfg["Pytz_Timezone"])
 now = uspac.localize(datetime.datetime.strptime(cfg["Start_Date"], '%Y-%m-%d %H:%M:%S'))
-policy_array = Utils.policy_to_minute(cfg["Setpoint"], now)
+policy_array = Utils.policy_per_minute(cfg["Setpoint"], now)
 prices_array = Utils.prices_per_minute(cfg["Pricing"][cfg["Pricing"]["Energy_Rates"]], now, cfg["Pricing"]["DRs"])
+policy_array_expanded = Utils.policy_per_minute_expanded(cfg["Setpoint"], now, cfg["Pricing"]["DRs"], cfg["Pricing"]["DRs_Expand_Percent"])
+
+
 data = Utils.data_fetch(cfg, cli, zones)
 
 
@@ -188,9 +213,8 @@ with open('temp.pckl', 'wb') as fp:
 	pickle.dump(data, fp)
 """
 
-baseline(data, policy_array, prices_array, zones, kwh)
-reality(data, policy_array, prices_array, zones, kwh)
-relive(data, policy_array, prices_array, zones, kwh)
-
-
-
+baseline(data, policy_array, prices_array, zones, kwh, 'baseline')
+baseline(data, policy_array_expanded, prices_array, zones, kwh, 'baseline_extended')
+reality(data, policy_array, prices_array, zones, kwh, 'reality')
+relive(data, policy_array, prices_array, zones, kwh, 'reality_simulated')
+print "Finished"
