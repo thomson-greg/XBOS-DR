@@ -1,31 +1,28 @@
 import numpy as np
 import pandas as pd
+import pyaml
+import yaml
 from scipy.optimize import curve_fit
-
 # daniel imports
 from sklearn.base import BaseEstimator, RegressorMixin
-
-import yaml
-import pyaml
 
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-
     def __init__(self, scoreType=-1):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
                         1 heating, 2 cooling.
         '''
-        self.scoreType = scoreType # instance variable because of how cross validation works with sklearn
+        self.scoreType = scoreType  # instance variable because of how cross validation works with sklearn
 
         self._params = None
         self._params_order = None
-        self._filter_columns = None # order of columns by which to filter when predicting and fitting data.
+        self._filter_columns = None  # order of columns by which to filter when predicting and fitting data.
 
-
-        # NOTE: if wanting to use cross validation, put these as class variables. Also, change in score, e.g. self.model_error to ThermalModel.model_error
+        # NOTE: if wanting to use cross validation, put these as class variables.
+        #  Also, change in score, e.g. self.model_error to ThermalModel.model_error
         # keeping track of all the rmse's computed with this class.
         # first four values are always the training data errors.
         self.baseline_error = []
@@ -36,8 +33,10 @@ class ThermalModel(BaseEstimator, RegressorMixin):
     # thermal model function
     def _func(self, X, *coeff):
         """The polynomial with which we model the thermal model.
-        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have to begin with "zone_temperature_" + "zone name"
-        :param *coeff: the coefficients for the thermal model. Should be in order: Tin, a1, a2, (Tout - Tin), bias, zones coeffs (as given by self._params_order)
+        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
+        have to begin with "zone_temperature_" + "zone name"
+        :param *coeff: the coefficients for the thermal model. Should be in order: Tin, a1, a2, (Tout - Tin),
+         bias, zones coeffs (as given by self._params_order)
         """
         Tin, a1, a2, Tout, dt, zone_temperatures = X[0], X[1], X[2], X[3], X[4], X[5:]
 
@@ -52,7 +51,8 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
     def fit(self, X, y=None):
         """Needs to be called to fit the model. Will set self._params to coefficients. 
-        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have to begin with "zone_temperature_" + "zone name"
+        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have 
+        to begin with "zone_temperature_" + "zone name"
         :param y: the labels corresponding to the data. 
         :return self
         """
@@ -63,19 +63,25 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         self._filter_columns = filter_columns
         self._params_order = ["a1", 'a2', 't_out', 'bias'] + list(zone_col)
 
+        # fit the data. we start our guess with all ones for coefficients.
+        # Need to do so to be able to generalize to variable number of zones.
         popt, pcov = curve_fit(self._func, X[filter_columns].T.as_matrix(), y.as_matrix(),
                                p0=np.ones(len(
-                                   self._params_order)))  # fit the data. we start our guess with all ones for coefficients. Need to do so to be able to generalize to variable number of zones.
+                                   self._params_order)))
         self._params = popt
         # score training data
         for action in range(-1, 3):
             self.score(X, y, scoreType=action)
-        #--------------------
+        # --------------------
         return self
+
+    def adaptiveLearning(self, X, y):
+        """Adaptive Learning. The data given will all be given the same weight when learning."""
 
     def predict(self, X, y=None):
         """Predicts the temperatures for each row in X.
-        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have to begin with "zone_temperature_" + "zone name"
+        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
+        have to begin with "zone_temperature_" + "zone name"
         :return (list) entry corresponding to prediction of row in X.
         """
         # only predicts next temperatures
@@ -93,14 +99,17 @@ class ThermalModel(BaseEstimator, RegressorMixin):
     def _normalizedRMSE_STD(self, dt, prediction, y):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.'''
         diff = prediction - y
-        diff_scaled = diff * 15. / dt  # to offset for actions which were less than 15 min. Normalizes to 15 min intervals. TODO maybe make variable standard intervals.
+
+        # to offset for actions which were less than 15 min. Normalizes to 15 min intervals.
+        # TODO maybe make variable standard intervals.
+        diff_scaled = diff * 15. / dt
         mean_error = np.mean(diff_scaled)
         rmse = np.sqrt(np.mean(np.square(diff_scaled)))
         # standard deviation of the error
         diff_std = np.sqrt(np.mean(np.square(diff_scaled - mean_error)))
         return mean_error, rmse, diff_std
 
-    def score(self, X, y, sample_weight=None, scoreType = None):
+    def score(self, X, y, sample_weight=None, scoreType=None):
         """Scores the model on the dataset given by X and y."""
         if scoreType is None:
             scoreType = self.scoreType
@@ -139,24 +148,19 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 class MPCThermalModel:
     def __init__(self, thermal_data, interval_length):
         """
-    
         :param thermal_data: {"zone": pd.df thermal data for zone}
-        :param now: 
         :param interval_length: 
-        :param max_actions: 
-        :param thermal_precision: 
         """
         self.zoneThermalModels = self.fit_zones(thermal_data)
         self.interval = interval_length  # new for predictions. Will be fixed right?
-        # TODO Make sure data starts now i guess? do we really care? We do need the current temperature though so we can keep constant throughout zones.
+        # we will keep the temperatures constant throughout the MPC as an approximation.
         self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in
-                                 thermal_data.items()}  # we will keep the temperatures constant throughout the MPC as an approximation.
+                                 thermal_data.items()}
 
-        self.weatherPredictions = None # store weather predictions for whole class
+        self.weatherPredictions = None  # store weather predictions for whole class
 
     def setWeahterPredictions(self, weatherPredictions):
         self.weatherPredictions = weatherPredictions
-
 
     def setZoneTemperatures(self, zone_temps):
         # store curr temperature for every zone. Call whenever we are starting new interval.
@@ -178,7 +182,8 @@ class MPCThermalModel:
         :param action: 
         :param outside_temperature: 
         :param interval: 
-        :param time: the hour index for self.weather_predictions. TODO understand how we can use hours if we look at next days .(i.e. horizon extends over midnight.)
+        :param time: the hour index for self.weather_predictions. 
+        TODO understand how we can use hours if we look at next days .(i.e. horizon extends over midnight.)
         :return: 
         """
         if interval is None:
@@ -205,7 +210,8 @@ class MPCThermalModel:
             config_dict[zone]["Zone Temperatures"] = self.zoneTemperatures
             zone_thermal_model = self.zoneThermalModels[zone]
             # store coefficients
-            coefficients = {parameter_name: param for parameter_name, param in zip(zone_thermal_model._params_order, zone_thermal_model._params)}
+            coefficients = {parameter_name: param for parameter_name, param in
+                            zip(zone_thermal_model._params_order, zone_thermal_model._params)}
             config_dict[zone]["coefficients"] = coefficients
             # store evaluations and RMSE's.
             config_dict[zone]["Evaluations"] = {}
@@ -214,16 +220,9 @@ class MPCThermalModel:
             config_dict[zone]["Evaluations"]["ActionOrder"] = zone_thermal_model.scoreTypeList
             config_dict[zone]["Evaluations"]["Better Than Baseline"] = zone_thermal_model.betterThanBaseline
 
-
-
         for zone, dict in config_dict.items():
             with open("../ZoneConfigs/thermal_model_" + zone, 'wb') as ymlfile:
                 pyaml.dump(config_dict[zone], ymlfile)
-
-
-
-
-
 
 
 if __name__ == '__main__':
@@ -231,6 +230,9 @@ if __name__ == '__main__':
 
     therm_data_file = open("zone_thermal_ciee")
     therm_data = pickle.load(therm_data_file)
+
+    with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+        advise_cfg = yaml.load(ymlfile)
 
     therm_data_file.close()
 

@@ -1,132 +1,95 @@
 import datetime, pytz, sys
-import yaml
-import msgpack
-
-from xbos import get_client
-from xbos.services.hod import HodClientHTTP
-from xbos.devices.thermostat import Thermostat
 
 # TODO DR EVENT needs fixing
 
 class NormalSchedule:
 
-	def __init__(self, cfg, t_stat, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
-
-		self.simpleDr = cfg["SimpleDR"]
-		self.server = cfg["Server"]
-		self.entity = cfg["Entity_File"]
-		self.agent = cfg["Agent_IP"]
-		self.tries = cfg["Thermostat_Write_Tries"]
+	def __init__(self, cfg, t_stat, advise_cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+		self.cfg = cfg
+		self.advise_cfg = advise_cfg
 		self.now = now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))
-
-		# query server to get the available zones
-		if self.server:
-			client = get_client(agent=self.agent, entity=self.entity)
-		else:
-			client = get_client()
-		hc = HodClientHTTP("http://ciee.cal-sdb.org")
-
-		q = """SELECT ?uri ?zone WHERE {
-			?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
-			?tstat bf:uri ?uri .
-			?tstat bf:controls/bf:feeds ?zone .
-		};
-		"""
-
 		self.tstat = t_stat
-
-
-	def workday(self):
-		p = {"override": True, "heating_setpoint": 70., "cooling_setpoint": 76., "mode": 3}
-		print "workday", datetime.datetime.now()
-
-		print p
-
-		for i in range(self.tries):
-			try:
-				self.tstat.write(p)
-				break
-			except:
-				if i == self.tries-1:
-					e = sys.exc_info()[0]
-					print e
-				continue
-
-
-	def workday_inactive(self):
-		p = {"override": True, "heating_setpoint": 62., "cooling_setpoint": 85., "mode": 3}
-		print "workday inactive", datetime.datetime.now()
-
-		print p
-
-		for i in range(self.tries):
-			try:
-				self.tstat.write(p)
-				break
-			except:
-				if i == self.tries-1:
-					e = sys.exc_info()[0]
-					print e
-				continue
-
 
 	# in case that the mpc doesnt work properly run this
 	def normal_schedule(self):
 
-		if self.simpleDr == True:
-			if self.server:
-				c = get_client(agent=self.agent, entity=self.entity)
+		def in_between(now, start, end):
+			if start < end:
+				return start <= now < end
+			elif end < start:
+				return start <= now or now < end
 			else:
-				c = get_client()
-			msg = c.query("xbos/events/dr/s.dr/sdb/i.xbos.dr_signal/signal/signal")[0]
-			for po in msg.payload_objects:
-				if po.type_dotted == (2, 9, 9, 9):
-					data = msgpack.unpackb(po.content)
-			print "DR EVENT"
+				return True
 
-		weekno = self.now.weekday()
+		setpoints_array = self.advise_cfg["Advise"]["Baseline"][self.now.weekday()]
 
-		if weekno < 5:
+		for j in setpoints_array:
+			if in_between(self.now.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
+						  datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+				SetpointLow = j[2]
+				SetpointHigh = j[3]
+				break
 
-			now_time = self.now.time()
-			if now_time >= datetime.time(18, 0) or now_time < datetime.time(7, 0):
-				self.workday_inactive()
-			else:
-				# ind=(now_time.hour+8)%24
-				ind = (now_time.hour) % 24
-				#print data[ind]
-				if self.simpleDr == True and data[ind]['Price'] > 0.8:
-					self.workday_inactive()
-				else:
-					self.workday()
-		else:
-			self.workday_inactive()
+		if not isinstance(SetpointLow, (int, float, long)):
+			SetpointLow = self.advise_cfg["Advise"]["Minimum_Safety_Temp"]
+		if not isinstance(SetpointHigh, (int, float, long)):
+			SetpointHigh = self.advise_cfg["Advise"]["Maximum_Safety_Temp"]
+
+		if self.cfg["Pricing"]["DR"] or self.now.weekday() == 4: #TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
+			SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]/100.*SetpointHigh
+			SetpointLow += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
 
 
-# if __name__ == '__main__':
-#
-# 	with open("config_south.yml", 'r') as ymlfile:
-# 		cfg = yaml.load(ymlfile)
-#
-# 	if cfg["Data_Manager"]["Server"]:
-# 		client = get_client(agent=cfg["Data_Manager"]["Agent_IP"], entity=cfg["Data_Manager"]["Entity_File"])
-# 	else:
-# 		client = get_client()
-# 	hc = HodClientHTTP("http://ciee.cal-sdb.org")
-#
-# 	q = """SELECT ?uri ?zone WHERE {
-# 		?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
-# 		?tstat bf:uri ?uri .
-# 		?tstat bf:controls/bf:feeds ?zone .
-# 	};
-# 	"""
-#
-# 	tstats = {}
-# 	for tstat in hc.do_query(q):
-# 		print tstat
-# 		tstats[tstat["?zone"]] = Thermostat(client, tstat["?uri"])
-#
-# 	normal_zones = [cfg["Data_Manager"]["Zone"]]
-#
-# 	ns = NormalSchedule(cfg, tstats, normal_zones)
-# 	ns.normal_schedule()
+		SetpointHigh = SetpointHigh if SetpointHigh < self.advise_cfg["Advise"]["Maximum_Safety_Temp"] \
+			else self.advise_cfg["Advise"]["Maximum_Safety_Temp"]
+		SetpointLow = SetpointLow if SetpointLow > self.advise_cfg["Advise"]["Minimum_Safety_Temp"] \
+			else self.advise_cfg["Advise"]["Minimum_Safety_Temp"]
+
+		p = {"override": True, "heating_setpoint": SetpointLow, "cooling_setpoint": SetpointHigh, "mode": 3}
+
+		for i in range(self.cfg["Thermostat_Write_Tries"]):
+			try:
+				self.tstat.write(p)
+				print "Writing Baseline:"
+				print p
+				break
+			except:
+				if i == self.cfg["Thermostat_Write_Tries"] - 1:
+					e = sys.exc_info()[0]
+					print e
+					return
+				continue
+
+
+if __name__ == '__main__':
+
+	import yaml
+	with open("config_file.yml", 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
+
+	from xbos import get_client
+	from xbos.services.hod import HodClient
+	if cfg["Server"]:
+		client = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+	else:
+		client = get_client()
+
+
+	hc = HodClient(cfg["Building"] + "/hod", client)
+
+	q = """SELECT ?uri ?zone WHERE {
+		?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
+		?tstat bf:uri ?uri .
+		?tstat bf:controls/bf:feeds ?zone .
+	};
+	"""
+
+	from xbos.devices.thermostat import Thermostat
+	threads = []
+	for tstat in hc.do_query(q)['Rows']:
+		print tstat
+		with open("Buildings/" + cfg["Building"] + "/ZoneConfigs/"+ tstat["?zone"] +".yml", 'r') as ymlfile:
+			advise_cfg = yaml.load(ymlfile)
+		NS = NormalSchedule(cfg, Thermostat(client, tstat["?uri"]), advise_cfg)
+		NS.normal_schedule()
+

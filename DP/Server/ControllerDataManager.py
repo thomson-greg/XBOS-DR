@@ -88,6 +88,8 @@ class ControllerDataManager:
 
         # give the thermostat query data better structure for later loop. Can index by zone and then get uuids for each
         # thermostat attribute.
+        print(temp_thermostat_query_data)
+
         thermostat_query_data = {}
         for tstat_attr, attr_dicts in temp_thermostat_query_data.items():
             for dict in attr_dicts:
@@ -100,7 +102,7 @@ class ControllerDataManager:
             0]  # TODO for now taking the first weather station. Should be determined based on metadata.
         c = mdal.MDALClient("xbos/mdal", client=self.client)
         outside_temperature_data = c.do_query({
-            'Composition': ["1c467b79-b314-3c1e-83e6-ea5e7048c37b"],
+            'Composition': [outside_temperature_query_data["?uuid"]],
             # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
             'Selectors': [mdal.MEAN]
             , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
@@ -138,6 +140,7 @@ class ControllerDataManager:
                  a1 is whether heating and a2 whether cooling."""
 
         # thermal data preprocess starts here
+        # Heating
         def f1(row):
             """
             helper function to format the thermal model dataframe
@@ -202,8 +205,8 @@ class ControllerDataManager:
                         temp_data_dict = {'time': dfs.index[0],
                                           't_in': dfs['t_in'][0],
                                           't_next': dfs['t_in'][-1],
-                                          'dt': (dfs.index[-1] - dfs.index[0]).seconds / 60 + self.window_size,
                                           # need to add windowsize for last timestep.
+                                          'dt': (dfs.index[-1] - dfs.index[0]).seconds / 60 + self.window_size,
                                           't_out': dfs['t_out'].mean(),  # mean does not count Nan values
                                           'action': dfs['a'][0]}
 
@@ -254,9 +257,17 @@ if __name__ == '__main__':
 
     dm = ControllerDataManager(controller_cfg=cfg, client=c)
     import pickle
+    # fetching data here
+    start = datetime.datetime(2018, 3, 18, 2, 0)
+    end = start + datetime.timedelta(hours = 3)
+    z = dm._get_thermal_data(start=dm.pytz_timezone.localize(start),
+                        end=dm.pytz_timezone.localize(end))
+    # # plots the data here .
+    # import matplotlib.pyplot as plt
+    # z[0]["HVAC_Zone_Southzone"].plot()
+    # plt.show()
 
-    z = dm.thermal_data()
-    zone_file = open("zone_thermal_" + dm.building, 'wb')
-    pickle.dump(z, zone_file)
-    zone_file.close()
+    # zone_file = open("test_" + dm.building, 'wb')
+    # pickle.dump(z, zone_file)
+    # zone_file.close()
 

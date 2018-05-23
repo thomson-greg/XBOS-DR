@@ -1,17 +1,17 @@
+import datetime
+
 import networkx as nx
 import numpy as np
+import plotly.offline as py
+import pytz
 import yaml
 
-from ThermalModel import ThermalModel
-from Occupancy import Occupancy
 from Discomfort import Discomfort
-from Safety import Safety
 from EnergyConsumption import EnergyConsumption
-import datetime
-import pytz
-
+from Occupancy import Occupancy
+from Safety import Safety
+from ThermalModel import ThermalModel
 from utils import plotly_figure
-import plotly.offline as py
 
 
 class Node:
@@ -37,7 +37,7 @@ class Node:
 
 class EVA:
     def __init__(self, current_time, l, pred_window, interval, discomfort,
-                 thermal, occupancy, safety, energy, root=Node([75], 0), noZones=1):
+                 thermal, occupancy, safety, energy, zones, root=Node([75], 0), noZones=1):
         """
         Constructor of the Evaluation Class
         The EVA class contains the shortest path algorithm and its utility functions
@@ -56,6 +56,9 @@ class EVA:
         noZones : int
         """
         # initialize class constants
+        # Daniel added TODO Seriously come up with something better to handle how assign zone to predict. Right now only doing it this way because we want to generalize to multiclass.
+        self.zones = zones
+
         self.noZones = noZones
         self.current_time = current_time
         self.l = l
@@ -112,9 +115,11 @@ class EVA:
             new_temperature = []
             consumption = []
             for i in range(self.noZones):
-                new_temperature.append(self.th.next_temperature(t_in=from_node.temps[i],
-                                                                action=action[i],
-                                                                time=self.get_real_time(from_node.time).hour, zone=i))
+                new_temperature.append(self.th.predict(t_in=from_node.temps[i],
+                                                       action=action[i],
+                                                       time=self.get_real_time(from_node.time).hour,
+                                                       zone=self.zones[i])[
+                                           0])  # index because we only need one prediction.
                 consumption.append(self.energy.calc_cost(action[i], from_node.time / self.interval))
 
             # create the node that describes the predicted data
@@ -182,7 +187,7 @@ class EVA:
 
 class Advise:
     # the Advise class initializes all the Models and runs the shortest path algorithm
-    def __init__(self, current_time, occupancy_data, zone_temperature, thermal_model,
+    def __init__(self, zones, current_time, occupancy_data, zone_temperature, thermal_model,
                  prices, lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons,
                  thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
         self.plot = plot_bool
@@ -190,7 +195,6 @@ class Advise:
 
         # initialize all models
         disc = Discomfort(setpoints, now=self.current_time)
-
 
         occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition, sensors)
         safety = Safety(safety_constraints, noZones=1)
@@ -212,6 +216,7 @@ class Advise:
             safety=safety,
             energy=energy,
             root=self.root,
+            zones=zones
         )
 
     def advise(self):

@@ -4,8 +4,12 @@ import yaml
 import Utils
 import pickle
 
+from ThermalModel import MPCThermalModel
+therm_data_file = open("zone_thermal_ciee")
+therm_data = pickle.load(therm_data_file)
+mpcThermalModel = MPCThermalModel(therm_data, 1)
 
-def baseline(data, policy_array, prices_array, zones, popts, kwh):
+def baseline(data, policy_array, prices_array, zones, kwh):
 
 	for zone in zones:
 		OPs = []  # [i[0] for i in return_dict["occupancy"]]
@@ -34,7 +38,7 @@ def baseline(data, policy_array, prices_array, zones, popts, kwh):
 			for z in [z for z in zones if z != zone]:
 				other_zones.append(data[z]["Tin"][i])
 
-			tnext = Utils.T_next([tin, action, tout, 1, other_zones], *popts)
+			tnext = mpcThermalModel.predict(tin, "HVAC_Zone_"+zone.lower().capitalize(), action, tout)[0]#Utils.T_next([tin, action, tout, 1, other_zones], *popts)
 
 			OPs.append(occ)
 			Tins.append(tin)
@@ -76,7 +80,7 @@ def reality(data, policy_array, prices_array, zones, kwh):
 			price = prices_array[i]
 			tin = data[zone]["Tin"][i]
 			occ = data[zone]["Occ"][i]
-			action = Utils.action(STPH, STPL, tin)
+			action = data[zone]["State"][i]
 			cost = Utils.cost(action, price, *kwh[zone])
 			discomfort = Utils.discomfort(STPH, STPL, tin, occ)
 
@@ -101,7 +105,7 @@ def reality(data, policy_array, prices_array, zones, kwh):
 		with open( zone +'_r.pckl', 'wb') as fp:
 			pickle.dump(return_dict, fp)
 
-def relive(data, policy_array, prices_array, zones, popts, kwh):
+def relive(data, policy_array, prices_array, zones, kwh):
 	for zone in zones:
 		OPs = []  # [i[0] for i in return_dict["occupancy"]]
 		Tins = []  # [i for i in return_dict["temperature"]]
@@ -129,7 +133,7 @@ def relive(data, policy_array, prices_array, zones, popts, kwh):
 			for z in [z for z in zones if z != zone]:
 				other_zones.append(data[z]["Tin"][i])
 
-			tnext = Utils.T_next([tin, action, tout, 1, other_zones], *popts)
+			tnext = mpcThermalModel.predict(tin, "HVAC_Zone_"+zone.lower().capitalize(), action, tout)[0]#Utils.T_next([tin, action, tout, 1, other_zones], *popts)
 
 			OPs.append(occ)
 			Tins.append(tin)
@@ -166,7 +170,7 @@ zones = cfg["Zones"]
 popts = cfg["popts"]
 kwh = {}
 for i in zones:
-	with open("../ZoneConfigs/"+i+".yml", 'r') as zonefile:
+	with open("../Buildings/"+cfg["Building"]+"/ZoneConfigs/"+i+".yml", 'r') as zonefile:
 		cfgz = yaml.load(zonefile)
 	kwh[i] = [cfgz["Advise"]["Heating_Consumption"], cfgz["Advise"]["Cooling_Consumption"]]
 
@@ -184,10 +188,9 @@ with open('temp.pckl', 'wb') as fp:
 	pickle.dump(data, fp)
 """
 
-
-baseline(data, policy_array, prices_array, zones, popts, kwh)
+baseline(data, policy_array, prices_array, zones, kwh)
 reality(data, policy_array, prices_array, zones, kwh)
-relive(data, policy_array, prices_array, zones,popts, kwh)
+relive(data, policy_array, prices_array, zones, kwh)
 
 
 

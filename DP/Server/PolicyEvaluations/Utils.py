@@ -36,7 +36,7 @@ def data_fetch(cfg, cli, zones):
 		tz=pytz.utc)
 	endtime = startime + timedelta(hours=24)
 
-	hod = HodClient(cfg["Hod_Client"], cli)
+	hod = HodClient(cfg["Building"]+"/hod", cli)
 
 	occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
 				  ?sensor rdf:type brick:Occupancy_Sensor .
