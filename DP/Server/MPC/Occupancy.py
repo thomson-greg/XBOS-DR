@@ -115,7 +115,7 @@ if __name__ == '__main__':
 	with open("../config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_Centralzone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
@@ -123,7 +123,7 @@ if __name__ == '__main__':
 	else:
 		c = get_client()
 
-	dm = DataManager(cfg, advise_cfg, c)
+	dm = DataManager(cfg, advise_cfg, c, "HVAC_Zone_Centralzone")
 	
 	occ = Occupancy(dm.preprocess_occ(), 15, 4, 4, advise_cfg["Advise"]["Sensors"])
 	print occ.occ(6)

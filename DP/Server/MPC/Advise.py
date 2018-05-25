@@ -182,8 +182,8 @@ class EVA:
 class Advise:
 	# the Advise class initializes all the Models and runs the shortest path algorithm
 	def __init__(self, current_time, occupancy_data, thermal_data, weather_predictions,
-				 prices, lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons, max_actions,
-				 thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
+				 prices, lamda, dr_lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons, vent_cons,
+				 max_actions, thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
 
 		self.plot =plot_bool
 		self.current_time = current_time
@@ -195,7 +195,7 @@ class Advise:
 		occ = Occupancy(occupancy_data, interval, predictions_hours, occ_obs_len_addition, sensors)
 		safety = Safety(safety_constraints, noZones=1)
 		energy = EnergyConsumption(prices, interval, now=self.current_time,
-								   heat=heating_cons, cool=cooling_cons)
+								   heat=heating_cons, cool=cooling_cons, vent=vent_cons)
 		
 		Zones_Starting_Temps = [thermal_data['t_next'][-1]]
 		self.root = Node(Zones_Starting_Temps, 0)
@@ -239,7 +239,7 @@ if __name__ == '__main__':
 	with open("../config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_Centralzone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 	else:
 		c = get_client()
 
-	dm = DataManager(cfg, advise_cfg, c)
+	dm = DataManager(cfg, advise_cfg, c, "HVAC_Zone_Centralzone")
 
 	adv = Advise(datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(tz=pytz.timezone("America/Los_Angeles")),
 				 dm.preprocess_occ(), dm.preprocess_therm(), dm.weather_fetch(),

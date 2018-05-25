@@ -32,7 +32,7 @@ def PlotDay(OPs, Tins, Policy, TinsUP, TinsDOWN, Costs, Prices, Discomforts, met
 	TinsDOWN : 1440 F Heating setpoint temperature values
 	Costs : 1440 dollars values
 	Prices : 1440 dollars values
-	Discomforts : 1440 F^2 min values of discomfort
+	Discomforts : 1440 F^2 min values of discomfortPolicies
 	method : any string describing the method
 	'''
 	discomfort = sum(Discomforts)

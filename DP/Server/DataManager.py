@@ -17,15 +17,15 @@ class DataManager:
 	"""
 	# Class that handles all the data fetching and some of the preprocess
 	"""
-	def __init__(self, controller_cfg, advise_cfg, client, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+	def __init__(self, controller_cfg, advise_cfg, client, zone, now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
 
 		self.controller_cfg = controller_cfg
 		self.advise_cfg = advise_cfg
 		self.pytz_timezone = controller_cfg["Pytz_Timezone"]
-		self.zone = advise_cfg["Data_Manager"]["Zone"]
-		self.interval = controller_cfg["Interval_Length"]
+		self.zone = zone
+		self.interval = advise_cfg["Advise"]["Interval_Length"]
 		self.now = now
-		self.horizon = advise_cfg["Advise"]["Hours"]
+		self.horizon = advise_cfg["Advise"]["MPCPredictiveHorizon"]
 		self.c = client
 
 
@@ -36,16 +36,17 @@ class DataManager:
 		Pandas DataFrame
 		"""
 
-		if self.advise_cfg["Advise"]["Sensors"]:
-			hod = HodClient(self.controller_cfg["Building"]+"/hod", self.c) #TODO MAKE THIS WORK WITH FROM AND xbos/hod, FOR SOME REASON IT DOES NOT
+		if self.advise_cfg["Advise"]["Occupancy_Sensors"]:
+			hod = HodClient("xbos/hod", self.c) #TODO MAKE THIS WORK WITH FROM AND xbos/hod, FOR SOME REASON IT DOES NOT
 
-			occ_query = """SELECT ?sensor ?uuid ?zone WHERE {
-			  ?sensor rdf:type brick:Occupancy_Sensor .
-			  ?sensor bf:isLocatedIn/bf:isPartOf ?zone .
-			  ?sensor bf:uuid ?uuid .
-			  ?zone rdf:type brick:HVAC_Zone
-			};
-			""" # get all the occupancy sensors uuids
+			occ_query = """SELECT ?sensor ?uuid ?zone FROM %s WHERE {
+
+						  ?sensor rdf:type brick:Occupancy_Sensor .
+						  ?sensor bf:isPointOf/bf:isPartOf ?zone .
+						  ?sensor bf:uuid ?uuid .
+						  ?zone rdf:type brick:HVAC_Zone
+						};
+						""" % self.controller_cfg["Building"]# get all the occupancy sensors uuids
 
 			results = hod.do_query(occ_query) # run the query
 			uuids = [[x['?zone'], x['?uuid']] for x in results['Rows']] # unpack
@@ -78,7 +79,7 @@ class DataManager:
 
 			return df.tz_localize(None)
 		else:
-			occupancy_array = self.advise_cfg["Advise"]["Occupancy_Schedule"]
+			occupancy_array = self.advise_cfg["Advise"]["Occupancy"]
 
 			def in_between(now, start, end):
 				if start < end:
@@ -279,7 +280,7 @@ class DataManager:
 
 	def building_setpoints(self):
 
-		setpoints_array = self.advise_cfg["Advise"]["Setpoints"]
+		setpoints_array = self.advise_cfg["Advise"]["Comfortband"]
 		def in_between(now, start, end):
 			if start < end:
 				return start <= now < end
@@ -336,7 +337,7 @@ if __name__ == '__main__':
 	with open("config_file.yml", 'r') as ymlfile:
 		cfg = yaml.load(ymlfile)
 
-	with open("Buildings/"+cfg["Building"]+"/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+	with open("Buildings/"+cfg["Building"]+"/ZoneConfigs/HVAC_Zone_Centralzone.yml", 'r') as ymlfile:
 		advise_cfg = yaml.load(ymlfile)
 
 	if cfg["Server"]:
@@ -344,7 +345,7 @@ if __name__ == '__main__':
 	else:
 		c = get_client()
 
-	dm = DataManager(cfg, advise_cfg, c)
+	dm = DataManager(cfg, advise_cfg, c, "HVAC_Zone_Centralzone")
 
 	print "Weather Predictions:"
 	print dm.weather_fetch()

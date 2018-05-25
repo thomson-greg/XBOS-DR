@@ -52,14 +52,14 @@ class NormalSchedule:
 
 		p = {"override": True, "heating_setpoint": SetpointLow, "cooling_setpoint": SetpointHigh, "mode": 3}
 
-		for i in range(self.cfg["Thermostat_Write_Tries"]):
+		for i in range(self.advise_cfg["Advise"]["Thermostat_Write_Tries"]):
 			try:
 				self.tstat.write(p)
 				print "Writing Baseline:"
 				print p
 				break
 			except:
-				if i == self.cfg["Thermostat_Write_Tries"] - 1:
+				if i == self.advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
 					e = sys.exc_info()[0]
 					print e
 					return

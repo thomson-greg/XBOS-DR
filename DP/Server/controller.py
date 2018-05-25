@@ -1,4 +1,4 @@
-import datetime, time, math, pytz, sys, threading
+import datetime, time, math, pytz, threading
 import yaml
 from NormalSchedule import NormalSchedule
 from DataManager import DataManager
@@ -11,12 +11,12 @@ from xbos.devices.thermostat import Thermostat
 
 
 # the main controller
-def hvac_control(cfg, advise_cfg, tstat, client):
+def hvac_control(cfg, advise_cfg, tstat, client, zone):
 
 	now = datetime.datetime.utcnow().replace(tzinfo=pytz.utc)
 
 	try:
-		dataManager = DataManager(cfg, advise_cfg, client, now=now)
+		dataManager = DataManager(cfg, advise_cfg, client, zone, now=now)
 		Prep_Therm = dataManager.preprocess_therm()
 		safety_constraints = dataManager.safety_constraints()
 		adv = Advise(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
@@ -24,17 +24,19 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 					 Prep_Therm,
 					 dataManager.weather_fetch(),
 					 dataManager.prices(),
-					 advise_cfg["Advise"]["Lambda"],
-					 cfg["Interval_Length"],
-					 advise_cfg["Advise"]["Hours"],
+					 advise_cfg["Advise"]["General_Lambda"],
+					 advise_cfg["Advise"]["DR_Lambda"],
+					 advise_cfg["Advise"]["Interval_Length"],
+					 advise_cfg["Advise"]["MPCPredictiveHorizon"],
 					 advise_cfg["Advise"]["Print_Graph"],
 					 advise_cfg["Advise"]["Heating_Consumption"],
 					 advise_cfg["Advise"]["Cooling_Consumption"],
+					 advise_cfg["Advise"]["Ventilation_Consumption"],
 					 advise_cfg["Advise"]["Max_Actions"],
 					 advise_cfg["Advise"]["Thermal_Precision"],
 					 advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
 					 dataManager.building_setpoints(),
-					 advise_cfg["Advise"]["Sensors"],
+					 advise_cfg["Advise"]["Occupancy_Sensors"],
 					 safety_constraints)
 		action = adv.advise()
 		temp = float(Prep_Therm['t_next'][-1])
@@ -86,12 +88,12 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 
 	# try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
 
-	for i in range(cfg["Thermostat_Write_Tries"]):
+	for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
 		try:
 			tstat.write(p)
 			break
 		except:
-			if i == cfg["Thermostat_Write_Tries"] - 1:
+			if i == advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
 				e = sys.exc_info()[0]
 				print e
 				return False
@@ -101,36 +103,44 @@ def hvac_control(cfg, advise_cfg, tstat, client):
 
 class ZoneThread (threading.Thread):
 
-	def __init__(self, cfg, tstat, zone, client):
+	def __init__(self, filename, tstat, zone, client):
 		threading.Thread.__init__(self)
-		self.cfg = cfg
+		self.cfg_filename = filename
 		self.tstat = tstat
 		self.zone = zone
 		self.client = client
 
 	def run(self):
 
-		try:
-			with open("Buildings/" + self.cfg["Building"] + "/ZoneConfigs/"+ self.zone +".yml", 'r') as ymlfile:
-				advise_cfg = yaml.load(ymlfile)
-		except:
-			print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
-			return #TODO MAKE THIS RUN NORMAL SCHEDULE SOMEHOW WHEN NO ZONE CONFIG EXISTS
+		starttime = time.time()
+		while True:
+			try:
+				with open(self.cfg_filename, 'r') as ymlfile:
+					cfg = yaml.load(ymlfile)
+				with open("Buildings/" + cfg["Building"] + "/ZoneConfigs/"+ self.zone +".yml", 'r') as ymlfile:
+					advise_cfg = yaml.load(ymlfile)
+			except:
+				print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
+				return #TODO MAKE THIS RUN NORMAL SCHEDULE SOMEHOW WHEN NO ZONE CONFIG EXISTS
 
 
-		if advise_cfg["Advise"]["MPC"]:
-			count = 0
-			while not hvac_control(self.cfg, advise_cfg, self.tstat, self.client):
-				time.sleep(10)
-				count += 1
-				if count == self.cfg["Thermostat_Write_Tries"]:
-					print("Problem with MPC, entering normal schedule.")
-					normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
-					normal_schedule.normal_schedule()
-					break
-		else:
-			normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
-			normal_schedule.normal_schedule()
+			if advise_cfg["Advise"]["MPC"]:
+				count = 0
+				while not hvac_control(cfg, advise_cfg, self.tstat, self.client, self.zone):
+					time.sleep(10)
+					count += 1
+					if count == advise_cfg["Advise"]["Thermostat_Write_Tries"]:
+						print("Problem with MPC, entering normal schedule.")
+						normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
+						normal_schedule.normal_schedule()
+						break
+			else:
+				normal_schedule = NormalSchedule(cfg, self.tstat, advise_cfg)
+				normal_schedule.normal_schedule()
+
+			print datetime.datetime.now()
+			time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - ((time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+
 
 
 if __name__ == '__main__':
@@ -149,30 +159,25 @@ if __name__ == '__main__':
 	else:
 		client = get_client()
 
-	starttime = time.time()
-	while True:
 
-		with open(yaml_filename, 'r') as ymlfile:
-			cfg = yaml.load(ymlfile)
+	with open(yaml_filename, 'r') as ymlfile:
+		cfg = yaml.load(ymlfile)
 
-		hc = HodClient(cfg["Building"]+"/hod", client)
+	hc = HodClient("xbos/hod", client)
 
-		q = """SELECT ?uri ?zone WHERE {
+	q = """SELECT ?uri ?zone FROM %s WHERE {
 			?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
 			?tstat bf:uri ?uri .
 			?tstat bf:controls/bf:feeds ?zone .
-		};
-		"""
+			};""" % cfg["Building"]
 
-		threads = []
-		for tstat in hc.do_query(q)['Rows']:
-			print tstat
-			thread = ZoneThread(cfg, Thermostat(client, tstat["?uri"]), tstat["?zone"], client)
-			thread.start()
-			threads.append(thread)
+	threads = []
+	for tstat in hc.do_query(q)['Rows']:
+		print tstat
+		thread = ZoneThread(yaml_filename, Thermostat(client, tstat["?uri"]), tstat["?zone"], client)
+		thread.start()
+		threads.append(thread)
 
-		for t in threads:
-			t.join()
+	for t in threads:
+		t.join()
 
-		print datetime.datetime.now()
-		time.sleep(60.*15. - ((time.time() - starttime) % (60.*15.)))
