@@ -42,6 +42,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         c1, c2, c3, c4, c_rest = coeff[0], coeff[1], coeff[2], coeff[3], coeff[4:]
 
+        # putting together the function
         first_half = c1 * a1 * Tin + c2 * a2 * Tin + c3 * (Tout - Tin) + c4
         second_half = 0
         for c, zone_temp in zip(c_rest, zone_temperatures):
@@ -80,9 +81,9 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
     def predict(self, X, y=None):
         """Predicts the temperatures for each row in X.
-        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
+        :param X: pd.df/pd.Series with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
         have to begin with "zone_temperature_" + "zone name"
-        :return (list) entry corresponding to prediction of row in X.
+        :return (np.array) entry corresponding to prediction of row in X.
         """
         # only predicts next temperatures
         try:
@@ -90,14 +91,14 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         except AttributeError:
             raise RuntimeError("You must train classifer before predicting data!")
 
-        # assumes that pandas gives the right order given that the indexing is in the right order.
-        res = [self._func(X.loc[date][self._filter_columns], *self._params)
-               for date in X.index]
+        # assumes that pandas returns df in order of indexing when doing X[self._filter_columns].
+        predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
 
-        return res
+        return predictions
 
-    def _normalizedRMSE_STD(self, dt, prediction, y):
-        '''Computes the RMSE with scaled differences to normalize to 15 min intervals.'''
+    def _normalizedRMSE_STD(self, prediction, y, dt):
+        '''Computes the RMSE with scaled differences to normalize to 15 min intervals.
+        NOTE: Use method if you already have predictions.'''
         diff = prediction - y
 
         # to offset for actions which were less than 15 min. Normalizes to 15 min intervals.
@@ -146,6 +147,8 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
 
 class MPCThermalModel:
+    """Class specifically designed for the MPC process. A container class for ThermalModels for each class with functions
+        designed to simplify usage."""
     def __init__(self, thermal_data, interval_length):
         """
         :param thermal_data: {"zone": pd.df thermal data for zone}
@@ -231,14 +234,22 @@ if __name__ == '__main__':
     therm_data_file = open("zone_thermal_ciee")
     therm_data = pickle.load(therm_data_file)
 
-    with open("../Buildings/ciee/ZoneConfigs/CentralZone.yml", 'r') as ymlfile:
+    with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_CentralZone.yml", 'r') as ymlfile:
         advise_cfg = yaml.load(ymlfile)
 
     therm_data_file.close()
 
-    mpcThermalModel = MPCThermalModel(therm_data, 15)
-    mpcThermalModel.save_to_config()
-    print(mpcThermalModel.predict(70, "HVAC_Zone_Southzone", 0, 70))
+    data = therm_data["HVAC_Zone_Centralzone"]
+    th = ThermalModel()
+    th.fit(X=data, y=data['t_next'])
+
+    for row in data.iterrows():
+        print(row[1])
+        th.predict(row[1])
+
+    # mpcThermalModel = MPCThermalModel(therm_data, 15)
+    # mpcThermalModel.save_to_config()
+    # print(mpcThermalModel.predict(70, "HVAC_Zone_Southzone", 0, 70))
     #
     # thermal_model = open("thermal_model", "wb")
     # pickle.dump(mpcThermalModel, thermal_model)

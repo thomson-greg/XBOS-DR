@@ -239,7 +239,8 @@ class ControllerDataManager:
             end = self.now
         if start is None:
             start = end - timedelta(days=days_back)
-
+        print(start)
+        print(end)
         z, o = self._get_thermal_data(start, end)
         return self._preprocess_thermal_data(z, o)
 
@@ -258,10 +259,10 @@ if __name__ == '__main__':
     dm = ControllerDataManager(controller_cfg=cfg, client=c)
     import pickle
     # fetching data here
-    start = datetime.datetime(2018, 3, 18, 2, 0)
-    end = start + datetime.timedelta(hours = 3)
-    z = dm._get_thermal_data(start=dm.pytz_timezone.localize(start),
-                        end=dm.pytz_timezone.localize(end))
+    z = dm.thermal_data(days_back=5)
+
+    with open("ciee_tested", "wb") as f:
+        pickle.dump(z, f)
     # # plots the data here .
     # import matplotlib.pyplot as plt
     # z[0]["HVAC_Zone_Southzone"].plot()
