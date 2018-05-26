@@ -229,28 +229,19 @@ class MPCThermalModel:
 
 
 if __name__ == '__main__':
-    import pickle
 
-    therm_data_file = open("zone_thermal_ciee")
-    therm_data = pickle.load(therm_data_file)
 
     with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_CentralZone.yml", 'r') as ymlfile:
         advise_cfg = yaml.load(ymlfile)
 
+    import pickle
+
+    therm_data_file = open("../Thermal Data/ciee_thermal_data_demo")
+    therm_data = pickle.load(therm_data_file)
+
     therm_data_file.close()
 
-    data = therm_data["HVAC_Zone_Centralzone"]
-    th = ThermalModel()
-    th.fit(X=data, y=data['t_next'])
+    mpcThermalModel = MPCThermalModel(therm_data, 15)
 
-    for row in data.iterrows():
-        print(row[1])
-        th.predict(row[1])
-
-    # mpcThermalModel = MPCThermalModel(therm_data, 15)
-    # mpcThermalModel.save_to_config()
-    # print(mpcThermalModel.predict(70, "HVAC_Zone_Southzone", 0, 70))
-    #
-    # thermal_model = open("thermal_model", "wb")
-    # pickle.dump(mpcThermalModel, thermal_model)
-    # thermal_model.close()
+    with open("../Thermal Data/thermal_model_demo", "wb") as f:
+        pickle.dump(mpcThermalModel, f)

@@ -125,7 +125,7 @@ class EVA:
                                                        action=action[i],
                                                        time=self.get_real_time(from_node.time).hour,
                                                        zone=self.zones[i])[
-                                           0])  # index because we only need one prediction.
+                                           0])  # index because self.th.predict returns array.
                 consumption.append(self.energy.calc_cost(action[i], from_node.time / self.interval))
 
             # create the node that describes the predicted data

@@ -44,15 +44,7 @@ hod_client = HodClient("xbos/hod", client)
 
 thermostat_query_data = hod_client.do_query(thermostat_query)["Rows"]
 
-
-# In[7]:
-
-
 tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in thermostat_query_data}
-
-
-# In[16]:
-
 
 
 COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 65, "override": True, "mode": 3}
@@ -66,7 +58,7 @@ def gatherZoneData(tstat):
               "temperature": tstat.temperature}
     return data
 
-def loopAction(tstats, action_messages, interval, dt, flag_function=lambda :True, stop_time = datetime.datetime(year=2018, month=5, day=25, hour=14, minute=30)):
+def loopAction(tstats, action_messages, interval, dt, flag_function=lambda :True, stop_time = datetime.datetime(year=2018, month=5, day=26, hour=14, minute=30)):
     """
     :param tstats: {zone: tstat object}
     :param action_messages: {zone: action dictionary}
@@ -119,8 +111,10 @@ def control(tstats, interval=30, dt=1):
     for action_zone in zone_order:
         zone_data = defaultdict(list)
         for i in range(3):
-            if i < 2 and action_zone == "HVAC_Zone_Eastzone":
+            # don't do anything for no action.
+            if i == 0:
                 continue
+
             print("Started action %s in zone %s at time %s" % (str(i), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
             # re setting since I want to store data all the time. Just to make sure we aren't loosing anything. 
             zone_data = defaultdict(list)

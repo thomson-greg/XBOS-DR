@@ -88,7 +88,6 @@ class ControllerDataManager:
 
         # give the thermostat query data better structure for later loop. Can index by zone and then get uuids for each
         # thermostat attribute.
-        print(temp_thermostat_query_data)
 
         thermostat_query_data = {}
         for tstat_attr, attr_dicts in temp_thermostat_query_data.items():
@@ -239,8 +238,6 @@ class ControllerDataManager:
             end = self.now
         if start is None:
             start = end - timedelta(days=days_back)
-        print(start)
-        print(end)
         z, o = self._get_thermal_data(start, end)
         return self._preprocess_thermal_data(z, o)
 
@@ -259,9 +256,9 @@ if __name__ == '__main__':
     dm = ControllerDataManager(controller_cfg=cfg, client=c)
     import pickle
     # fetching data here
-    z = dm.thermal_data(days_back=5)
+    z = dm.thermal_data(days_back=10)
 
-    with open("ciee_tested", "wb") as f:
+    with open("Thermal Data/ciee_thermal_data_demo", "wb") as f:
         pickle.dump(z, f)
     # # plots the data here .
     # import matplotlib.pyplot as plt

@@ -12,6 +12,8 @@ from NormalSchedule import NormalSchedule
 
 sys.path.insert(0, 'MPC')
 from Advise import Advise
+from ThermalModel import *
+
 
 from xbos import get_client
 from xbos.services.hod import HodClient
@@ -23,7 +25,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
     try:
         tstat = tstats[zone]
-        dataManager = DataManager(cfg, advise_cfg, client, now=now)
+        dataManager = DataManager(cfg, advise_cfg, client, zone, now=now)
 
         tstat_temperature = tstat.temperature
         safety_constraints = dataManager.safety_constraints()
@@ -102,7 +104,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
-            tstat.write(p)
+            # tstat.write(p)
             break
         except:
             if i == advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
@@ -148,7 +150,7 @@ class ZoneThread(threading.Thread):
                         normal_schedule.normal_schedule()
                         break
             else:
-                normal_schedule = NormalSchedule(cfg, self.tstat[zone], advise_cfg)
+                normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
 
             print datetime.datetime.now()
@@ -183,23 +185,23 @@ if __name__ == '__main__':
     #     thermal_data = pickle.load(f)
 
     # thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"])
-    with open("demo_thermal_model", 'r') as f:
+    with open("Thermal Data/thermal_model_demo", 'r') as f:
         thermal_model = pickle.load(f)
-        # -------------------
+    # -------------------
 
 
-        with open(yaml_filename, 'r') as ymlfile:
-            cfg = yaml.load(ymlfile)
+    with open(yaml_filename, 'r') as ymlfile:
+        cfg = yaml.load(ymlfile)
 
-        hc = HodClient("xbos/hod", client)
+    hc = HodClient("xbos/hod", client)
 
-        q = """SELECT ?uri ?zone FROM %s WHERE {
-			?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
-			?tstat bf:uri ?uri .
-			?tstat bf:controls/bf:feeds ?zone .
-			};""" % cfg["Building"]
+    q = """SELECT ?uri ?zone FROM %s WHERE {
+        ?tstat rdf:type/rdfs:subClassOf* brick:Thermostat .
+        ?tstat bf:uri ?uri .
+        ?tstat bf:controls/bf:feeds ?zone .
+        };""" % cfg["Building"]
 
-        threads = []
+    threads = []
     tstat_query_data = hc.do_query(q)['Rows']
     tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in tstat_query_data}
     for zone, tstat in tstats.items():
