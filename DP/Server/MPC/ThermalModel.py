@@ -9,11 +9,12 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, scoreType=-1):
+    def __init__(self, scoreType=-1, thermal_precision=2):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
                         1 heating, 2 cooling.
+        :param thermal_precision: the number of decimal points when predicting.
         '''
         self.scoreType = scoreType  # instance variable because of how cross validation works with sklearn
 
@@ -29,6 +30,9 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         self.model_error = []
         self.scoreTypeList = []  # to know which action each rmse belongs to.
         self.betterThanBaseline = []
+
+        self.thermalPrecision=thermal_precision
+        self.learning_rate  = 0.01 # TODO make input and evaluate which one is best.
 
     # thermal model function
     def _func(self, X, *coeff):
@@ -50,11 +54,20 @@ class ThermalModel(BaseEstimator, RegressorMixin):
             second_half += c * diff
         return Tin + (first_half + second_half) * dt
 
+    def _features(self, X):
+        Tin, a1, a2, Tout, dt, zone_temperatures = X[0], X[1], X[2], X[3], X[4], X[5:]
+        features = [a1, a2, Tout - Tin, 1]
+        for zone_temp in zone_temperatures:
+            features.append(zone_temp - Tin)
+
+        return np.array(features)
+
+
     def fit(self, X, y=None):
         """Needs to be called to fit the model. Will set self._params to coefficients. 
         :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have 
         to begin with "zone_temperature_" + "zone name"
-        :param y: the labels corresponding to the data. 
+        :param y: the labels corresponding to the data. As a pd.dataframe
         :return self
         """
         zone_col = X.columns[["zone_temperature_" in col for col in X.columns]]
@@ -69,19 +82,29 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         popt, pcov = curve_fit(self._func, X[filter_columns].T.as_matrix(), y.as_matrix(),
                                p0=np.ones(len(
                                    self._params_order)))
-        self._params = popt
+        self._params = np.array(popt)
         # score training data
         for action in range(-1, 3):
             self.score(X, y, scoreType=action)
         # --------------------
         return self
 
-    def adaptiveLearning(self, X, y):
-        """Adaptive Learning. The data given will all be given the same weight when learning."""
+    def updateFit(self, X, y):
+        """Adaptive Learning. The data given will all be given the same weight when learning.
+        :param X: (pd.df) with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have 
+        to begin with "zone_temperature_" + "zone name
+        :param y: (float)"""
+        # fit the data. we start our guess with all ones for coefficients.
+        # Need to do so to be able to generalize to variable number of zones.
+        # NOTE: Using gradient decent $$self.params = self.param - self.learning_rate * 2 * (self._func(X, *params) - y) * features(X)
+        loss = self._func(X[self._filter_columns].T.as_matrix(), *self._params)[0] - y
+        adjust =  self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
+        self._params = np.array(self._params) - adjust
+
 
     def predict(self, X, y=None):
         """Predicts the temperatures for each row in X.
-        :param X: pd.df/pd.Series with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
+        :param X: pd.df/pd.Series with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperatures where all 
         have to begin with "zone_temperature_" + "zone name"
         :return (np.array) entry corresponding to prediction of row in X.
         """
@@ -94,7 +117,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         # assumes that pandas returns df in order of indexing when doing X[self._filter_columns].
         predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
 
-        return predictions
+        return np.round(predictions, self.thermalPrecision)
 
     def _normalizedRMSE_STD(self, prediction, y, dt):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.
@@ -162,11 +185,44 @@ class MPCThermalModel:
 
         self.weatherPredictions = None  # store weather predictions for whole class
 
+        self.lastAction = None # TODO Fix, absolute hack and not good. controller should store this.
+        self.now = None
+
+    # TODO Fix, absolute hack and not good. controller should store this.
+    def setLastActionAndTime(self, action, now):
+        self.lastAction = action
+        self.now = now
+
     def setWeahterPredictions(self, weatherPredictions):
         self.weatherPredictions = weatherPredictions
 
-    def setZoneTemperatures(self, zone_temps):
-        # store curr temperature for every zone. Call whenever we are starting new interval.
+    def setZoneTemperaturesAndFit(self, zone_temps, dt):
+        # TODO will all zones have the same dt ?
+        """
+        store curr temperature for every zone. Call whenever we are starting new interval.
+        :param zone_temps: {zone: temperature}
+        :return: 
+        """
+        if self.lastAction is None or self.weatherPredictions is None:
+            self.zoneTemperatures = zone_temps
+            return
+        # ('t_in', 'a1', 'a2', 't_out', 'dt') and all
+        # zone
+        # temperature
+        action = self.lastAction
+        t_out = self.weatherPredictions[self.now.hour]
+        for zone in self.zoneTemperatures.keys():
+            X = {"a1": int(0 < action <= 1), "a2": int(1 < action <= 2), "dt": dt, "t_out": t_out, "t_in": self.zoneTemperatures[zone]}
+
+            # Not most loop efficient but fine for now.
+            for key_zone, val in self.zoneTemperatures.items():
+                if key_zone != zone:
+                    X["zone_temperature_" + key_zone] = val
+            y = zone_temps[zone]
+            X = pd.DataFrame(X, index=[0])
+            # online learning the new data
+            self.zoneThermalModels[zone].updateFit(X, y)
+
         self.zoneTemperatures = zone_temps
 
     def fit_zones(self, data):
@@ -187,7 +243,7 @@ class MPCThermalModel:
         :param interval: 
         :param time: the hour index for self.weather_predictions. 
         TODO understand how we can use hours if we look at next days .(i.e. horizon extends over midnight.)
-        :return: 
+        :return: (array) predictions in order
         """
         if interval is None:
             interval = self.interval

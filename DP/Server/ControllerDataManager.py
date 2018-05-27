@@ -106,10 +106,11 @@ class ControllerDataManager:
             'Selectors': [mdal.MEAN]
             , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
                        'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'WindowSize': str(self.window_size) + 'min',
+                       'WindowSize': str(15) + 'min',#str(self.window_size) + 'min',
                        'Aligned': True}})
         outside_temperature_data = outside_temperature_data["df"]  # since only data for one uuid
         outside_temperature_data.columns = ["t_out"]
+        outside_temperature_data.resample("T").mean()
 
         # get the data for the thermostats for each zone.
         zone_thermal_data = {}
@@ -256,10 +257,12 @@ if __name__ == '__main__':
     dm = ControllerDataManager(controller_cfg=cfg, client=c)
     import pickle
     # fetching data here
-    z = dm.thermal_data(days_back=10)
+    z = dm.thermal_data(days_back=30)
 
     with open("Thermal Data/ciee_thermal_data_demo", "wb") as f:
         pickle.dump(z, f)
+
+
     # # plots the data here .
     # import matplotlib.pyplot as plt
     # z[0]["HVAC_Zone_Southzone"].plot()
