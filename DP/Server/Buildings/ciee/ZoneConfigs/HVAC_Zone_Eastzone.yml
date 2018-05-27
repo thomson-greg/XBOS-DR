@@ -1,3 +1,4 @@
+Zone: HVAC_Zone_Eastzone
 Advise:
   Print_Graph: False
   General_Lambda: 0.995 #0-1

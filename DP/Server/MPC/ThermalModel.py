@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import pyaml
+
 import yaml
 from scipy.optimize import curve_fit
 # daniel imports
@@ -281,6 +281,7 @@ class MPCThermalModel:
 
         for zone, dict in config_dict.items():
             with open("../ZoneConfigs/thermal_model_" + zone, 'wb') as ymlfile:
+                # TODO Note import pyaml here to get a pretty config file.
                 pyaml.dump(config_dict[zone], ymlfile)
 
 

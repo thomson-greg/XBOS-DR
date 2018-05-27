@@ -75,7 +75,6 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Doing nothing"
-        print p
 
     elif action == "1":
         heating_setpoint = math.ceil(tstat_temperature + 0.1) + advise_cfg["Advise"]["Hysterisis"]
@@ -85,7 +84,6 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
             heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Heating"
-        print p
 
     elif action == "2":
         cooling_setpoint = math.floor(tstat_temperature - 0.1) - advise_cfg["Advise"]["Hysterisis"]
@@ -96,11 +94,11 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Cooling"
-        print p
-
     else:
         print "Problem with action."
         return False
+
+    print("Zone: " + zone + ", action: " + str(p))
 
     # try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
 
