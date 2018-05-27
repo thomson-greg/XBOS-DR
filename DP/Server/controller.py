@@ -107,7 +107,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
             # TODO uncomment for actual MPC
-            # tstat.write(p)
+            tstat.write(p)
             break
         except:
             if i == advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
@@ -157,8 +157,8 @@ class ZoneThread(threading.Thread):
                 normal_schedule.normal_schedule()
 
             print datetime.datetime.now()
-            # time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
-            # (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+            time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
+            (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
 
 
 if __name__ == '__main__':
