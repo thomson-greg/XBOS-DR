@@ -173,7 +173,6 @@ class ZoneThread(threading.Thread):
             else:
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
-
             print datetime.datetime.now()
             time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
             (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
@@ -206,7 +205,8 @@ if __name__ == '__main__':
         thermal_data = pickle.load(f)
 
     # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
-    thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"])
+    # TODO Add thermal precision from config.
+    thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"], thermal_precision=cfg["Thermal_Precision"])
     # with open("Thermal Data/thermal_model_demo", 'r') as f:
     #     thermal_model = pickle.load(f)
     # -------------------

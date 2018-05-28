@@ -2,14 +2,14 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : "ciee"
 Entity_File: "thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "37.8751,-122.2761"
 
 # TODO Daniel added this
 Building: "ciee"
 # for thermal model
 Max_Actions: 400 #int
-Thermal_Precision: 400. #float
+Thermal_Precision: 0.05 #float
 Interval_Length: 15 # min
 
 

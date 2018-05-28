@@ -8,7 +8,7 @@ Advise:
   Cooling_Consumption: 1.25  # kW
   Ventilation_Consumption: 0.01 #kW
   Max_Actions: 400 #int
-  Thermal_Precision: 400. #float
+  Thermal_Precision: 0.05 #float
   Occupancy_Obs_Len_Addition: 4 #Hours
   Minimum_Comfortband_Height: 4. #F
   Hysterisis: 1. #F
@@ -29,7 +29,7 @@ Advise:
                        4:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        5:[["00:00", "00:00", 0]],
                        6:[["00:00", "00:00", 0]]} # 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun. Must populate all the hours
-  MPC: False
+  MPC: True
   Baseline_Dr_Extend_Percent: 20.
   Baseline: {0:[["00:00", "07:00", None, None], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", None, None]],
               1:[["00:00", "07:00", None, None], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", None, None]],
