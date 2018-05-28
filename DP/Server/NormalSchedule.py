@@ -44,24 +44,32 @@ class NormalSchedule:
         if not isinstance(SetpointHigh, (int, float, long)):
             SetpointHigh = Safety_temps[0][1]
 
-        if self.cfg["Pricing"][
-            "DR"] or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
+        if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), datetime.time(int(cfg["DR_Start"].split(":")[0]), int(cfg["DR_Finish"].split(":")[1])))) \
+                or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
             SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
             SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
 
 
+        # Making sure that the different between setpointHigh and Low is at least the Comfortband
+        if SetpointHigh - SetpointLow < self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
+            raise Exception("Warning, the difference between SetpointHigh and SetpointLow is too narrow. Difference: %s. Check the config file schedule." % str(SetpointHigh - SetpointLow))
+
+        # making sure that we are not exceeding the Safety temps.
+        # Only violates the Comfortband height if safefy temperatures violate it.
         if SetpointLow < Safety_temps[0][0]:
+            diff = Safety_temps[0][0] - SetpointLow
             SetpointLow = Safety_temps[0][0]
-            SetpointHigh = SetpointLow + self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+            SetpointHigh = min(Safety_temps[0][1], SetpointHigh + diff)
+
         elif SetpointHigh > Safety_temps[0][1]:
+            diff = SetpointHigh - Safety_temps[0][1]
             SetpointHigh = Safety_temps[0][1]
-            SetpointLow = SetpointHigh - self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+            SetpointLow = max(Safety_temps[0][0], SetpointLow - diff)
 
         p = {"override": True, "heating_setpoint": SetpointLow, "cooling_setpoint": SetpointHigh, "mode": 3}
 
         for i in range(self.advise_cfg["Advise"]["Thermostat_Write_Tries"]):
             try:
-                # TODO Uncomment later
                 self.tstat.write(p)
                 print("For zone: %s writing Baseline: %s" % (self.zone, str(p)))
                 break
