@@ -114,6 +114,7 @@ class EVA:
         action_set = self.safety.safety_actions(from_node.temps, from_node.time / self.interval)
 
         # iterate for each available action
+        # actions are strings.
         for action in action_set:
 
             # predict temperature and energy cost of action
@@ -122,7 +123,7 @@ class EVA:
             for i in range(self.noZones):
                 # Note: we are assuming self.zones and self.temps are in right order.
                 new_temperature.append(self.th.predict(t_in=from_node.temps[i],
-                                                       action=action[i],
+                                                       action=int(action[i]),
                                                        time=self.get_real_time(from_node.time).hour,
                                                        zone=self.zones[i])[
                                            0])  # index because self.th.predict returns array.

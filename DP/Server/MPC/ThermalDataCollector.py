@@ -23,7 +23,7 @@ class ThermalDataCollector:
 
     def __init__(self, client, building):
 
-        thermostat_query = """SELECT ?zone ?uri FROM ciee WHERE { 
+        thermostat_query = """SELECT ?zone ?uri FROM %s WHERE { 
                   ?tstat rdf:type brick:Thermostat .
                   ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
                   ?location_zone rdf:type brick:HVAC_Zone .
@@ -35,9 +35,12 @@ class ThermalDataCollector:
                 };"""
 
         self.client = get_client()
+        self.building = building
+
         hod_client = HodClient("xbos/hod", self.client)
 
-        thermostat_query_data = hod_client.do_query(thermostat_query)["Rows"]
+        thermostat_query_data = hod_client.do_query(thermostat_query % self.building)["Rows"]
+
         self.tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in thermostat_query_data}
 
         self.COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 65, "override": True,
@@ -47,7 +50,6 @@ class ThermalDataCollector:
         self.NO_ACTION = lambda tstat: {"heating_setpoint": tstat.temperature - 5,
                                         "cooling_setpoint": tstat.temperature + 5,
                                         "override": True, "mode": 3}
-        self.building = building
 
     def gatherZoneData(self, tstat):
         data = {  "heating_setpoint": tstat.heating_setpoint,

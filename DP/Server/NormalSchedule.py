@@ -47,7 +47,8 @@ class NormalSchedule:
         if self.cfg["Pricing"][
             "DR"] or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
             SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
-            SetpointLow += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
+            SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
+
 
         if SetpointLow < Safety_temps[0][0]:
             SetpointLow = Safety_temps[0][0]
@@ -60,6 +61,7 @@ class NormalSchedule:
 
         for i in range(self.advise_cfg["Advise"]["Thermostat_Write_Tries"]):
             try:
+                # TODO Uncomment later
                 self.tstat.write(p)
                 print("For zone: %s writing Baseline: %s" % (self.zone, str(p)))
                 break
