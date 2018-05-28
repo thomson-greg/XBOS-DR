@@ -21,7 +21,7 @@ from xbos.devices.thermostat import Thermostat
 
 class ThermalDataCollector:
 
-    def __init__(self, client):
+    def __init__(self, client, building):
 
         thermostat_query = """SELECT ?zone ?uri FROM ciee WHERE { 
                   ?tstat rdf:type brick:Thermostat .
@@ -47,6 +47,7 @@ class ThermalDataCollector:
         self.NO_ACTION = lambda tstat: {"heating_setpoint": tstat.temperature - 5,
                                         "cooling_setpoint": tstat.temperature + 5,
                                         "override": True, "mode": 3}
+        self.building = building
 
     def gatherZoneData(self, tstat):
         data = {  "heating_setpoint": tstat.heating_setpoint,
@@ -151,7 +152,7 @@ class ThermalDataCollector:
                     print("The following were recorded setpoint changes:" , recorded_setpoint_changes)
 
                 print("Done with action: ", i)
-                with open("./Freezing_CIEE/"+ str(i) + ";"+  action_zone + ";" + datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S'), "wb") as f:
+                with open("./Freezing_"+self.building+ "/"+ str(i) + ";"+  action_zone + ";" + datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S'), "wb") as f:
                     pickle.dump({"zone": action_zone, "action": i, "data": zone_data}, f)
 
             print("done with zone", action_zone)
@@ -175,7 +176,7 @@ if __name__ == '__main__':
     else:
         client = get_client()
 
-    collector = ThermalDataCollector(client)
+    collector = ThermalDataCollector(client, cfg["Building"])
     collector.control(collector.tstats, interval = 30., dt = 30/60.)
 
 
