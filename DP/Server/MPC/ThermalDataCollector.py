@@ -55,7 +55,7 @@ class ThermalDataCollector:
                   "temperature": tstat.temperature}
         return data
 
-    def loopAction(self, tstats, action_messages, interval, dt, flag_function=lambda :True, stop_time = datetime.datetime(year=2018, month=5, day=26, hour=14, minute=30)):
+    def loopAction(self, tstats, action_messages, interval, dt, flag_function=lambda :True, stop_time = datetime.datetime(year=2018, month=5, day=28, hour=14, minute=30)):
         """
         :param tstats: {zone: tstat object}
         :param action_messages: {zone: action dictionary}
@@ -67,15 +67,22 @@ class ThermalDataCollector:
         returns: {zone: pd.df columns:["heating_setpoint",
                   "cooling_setpoint",
                   "state",
-                  "temperature", "dt"] index=time right after all actions were written to thermostats (freq=dt)}"""
+                  "temperature", "dt"] index=time right after all actions were written to thermostats (freq=dt)},
+                  (array) (expected cooling_setpoint, recorded cooling_setpoint,
+                   expected heating_setpoint, recorded heating set_point, time, zone) records if someone was interfering with the setpoints."""
         start_time = time.time()
         recorded_data = defaultdict(list)
+        recorded_setpoint_changes = []
         while time.time() - start_time < 60*interval and flag_function() and (datetime.datetime.utcnow() < stop_time):
             try:
                 # potential improvement is to make the times more accurate
                 run_time = time.time()
                 for zone, action in action_messages.items():
                     tstats[zone].write(action(tstats[zone]))
+                    if tstat.heating_setpoint != action["heating_setpoint"] or tstat.cooling_setpoint != action["cooling_setpoint"]:
+                        recorded_setpoint_changes.append((action["cooling_setpoint"], tstat.cooling_setpoint,
+                                                          action["heating_setpoint"], tstat.heating_setpoint,
+                                                          datetime.datetime.utcnow(), zone))
 
                 # using dt as we assume it will be, (i.e. runtime less than dt). We can infer later if it differs.
                 time_data = {"time": datetime.datetime.utcnow(), "dt": dt}
@@ -95,7 +102,7 @@ class ThermalDataCollector:
         for zone, data in recorded_data.items():
             data = pd.DataFrame(data).set_index('time')
             dataframe_data[zone] = data
-        return dataframe_data
+        return dataframe_data, recorded_setpoint_changes
 
 
     def control(self, tstats, interval=30, dt=1):
@@ -129,10 +136,10 @@ class ThermalDataCollector:
                 zone_tstat = tstats[action_zone]
 
                 # TODO Note, override the interval for now. Could put this in function parameters
-                # LAMBDA SHOULD BE A COSTUM FUNCTION FROM OUTSIDE OF THIS FUNCTION.
+                # lambda function SHOULD BE A COSTUM FUNCTION FROM OUTSIDE OF THIS FUNCTION.
                 interval = 90 if i != 0 else 15
                 zone_action_msg = action_messages[action_zone]
-                action_data = self.loopAction(tstats, action_messages, interval, dt, lambda : (not ((zone_action_msg(zone_tstat)["heating_setpoint"] + 2) < zone_tstat.temperature < (zone_action_msg(zone_tstat)["cooling_setpoint"] - 2))) or (i ==0))
+                action_data, recorded_setpoint_changes = self.loopAction(tstats, action_messages, interval, dt, lambda : (not ((zone_action_msg(zone_tstat)["heating_setpoint"] + 2) < zone_tstat.temperature < (zone_action_msg(zone_tstat)["cooling_setpoint"] - 2))) or (i ==0))
 
                 for zone, df in action_data.items():
                     if zone == action_zone:
@@ -140,6 +147,8 @@ class ThermalDataCollector:
                     else:
                         df["action"] = np.ones(df.shape[0]) * 0
                     zone_data[zone].append(df)
+                if recorded_setpoint_changes != []:
+                    print("The following were recorded setpoint changes:" , recorded_setpoint_changes)
 
                 print("Done with action: ", i)
                 with open("./Freezing_CIEE/"+ str(i) + ";"+  action_zone + ";" + datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S'), "wb") as f:

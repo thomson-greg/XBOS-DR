@@ -56,10 +56,10 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         thermal_model.setLastActionAndTime(action, now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))) # TODO Fix, absolute hack and not good. controller should store this.
 
 
-    except Exception:
+    except Exception as exception:
         # TODO Find a better way for exceptions
         e = sys.exc_info()
-        print e
+        print exception
         return False
 
     # action "0" is Do Nothing, action "1" is Cooling, action "2" is Heating
