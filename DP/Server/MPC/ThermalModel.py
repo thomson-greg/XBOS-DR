@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, scoreType=-1, thermal_precision=2):
+    def __init__(self, thermal_precision=0.05, learning_rate = 0.0001, scoreType=-1,):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
@@ -32,7 +32,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         self.betterThanBaseline = []
 
         self.thermalPrecision = thermal_precision
-        self.learning_rate = 0.0001  # TODO make input and evaluate which one is best.
+        self.learning_rate = learning_rate  # TODO evaluate which one is best.
 
     # thermal model function
     def _func(self, X, *coeff):
@@ -54,7 +54,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         for zone_temp in zone_temperatures:
             features.append(zone_temp - Tin)
 
-        return np.array(features) * np.array(dt)
+        return np.array(features) * dt
 
     def fit(self, X, y=None):
         """Needs to be called to fit the model. Will set self._params to coefficients. 
@@ -107,7 +107,8 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         # assumes that pandas returns df in order of indexing when doing X[self._filter_columns].
         predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
 
-        return np.round(predictions, self.thermalPrecision)
+        # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
+        return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
 
     def _normalizedRMSE_STD(self, prediction, y, dt):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.
@@ -163,15 +164,14 @@ class MPCThermalModel:
     """Class specifically designed for the MPC process. A container class for ThermalModels for each class with functions
         designed to simplify usage."""
 
-    def __init__(self, thermal_data, interval_length):
+    def __init__(self, thermal_data, interval_length, thermal_precision=0.05):
         """
         :param thermal_data: {"zone": pd.df thermal data for zone}
         :param interval_length: 
         """
         self._oldParams = {}
 
-
-        self.zoneThermalModels = self.fit_zones(thermal_data)
+        self.zoneThermalModels = self.fit_zones(thermal_data, thermal_precision)
         self.interval = interval_length  # new for predictions. Will be fixed right?
         # we will keep the temperatures constant throughout the MPC as an approximation.
         self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in
@@ -225,12 +225,12 @@ class MPCThermalModel:
 
         self.zoneTemperatures = zone_temps
 
-    def fit_zones(self, data):
+    def fit_zones(self, data, thermal_precision):
         """Assigns a thermal model to each zone.
         :param data: {zone: timeseries pd.df columns (t_in, dt, a1, a2, t_out, other_zone_temperatures)"""
         zoneModels = {}
         for zone, val in data.items():
-            zoneModels[zone] = ThermalModel().fit(val, val["t_next"])
+            zoneModels[zone] = ThermalModel(thermal_precision=thermal_precision).fit(val, val["t_next"])
             self._oldParams[zone] = []
             self._oldParams[zone].append(zoneModels[zone]._params)
 
