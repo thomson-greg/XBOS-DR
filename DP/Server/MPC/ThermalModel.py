@@ -221,7 +221,7 @@ class MPCThermalModel:
             # store the params for potential evaluations.
             self._oldParams[zone].append(self.zoneThermalModels[zone]._params)
             # to make sure oldParams holds no more than 50 values for each zone
-            self._oldParams[zone] = self._oldParams[-50:]
+            self._oldParams[zone] = self._oldParams[zone][-50:]
 
         self.zoneTemperatures = zone_temps
 

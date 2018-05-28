@@ -3,6 +3,7 @@ import math
 import sys
 import threading
 import time
+import traceback
 
 import pytz
 import yaml
@@ -57,9 +58,9 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
 
     except Exception as exception:
+
+        print(traceback.format_exc())
         # TODO Find a better way for exceptions
-        e = sys.exc_info()
-        print exception
         return False
 
     # action "0" is Do Nothing, action "1" is Heating, action "2" is Cooling
@@ -174,8 +175,9 @@ class ZoneThread(threading.Thread):
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
-            (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+            time.sleep(5)
+            # time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
+            # (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
 
 
 if __name__ == '__main__':
