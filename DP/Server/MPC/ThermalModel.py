@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, thermal_precision=0.05, learning_rate = 0.0001, scoreType=-1,):
+    def __init__(self, thermal_precision=0.05, learning_rate = 0.00001, scoreType=-1,):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
@@ -88,6 +88,17 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         to begin with "zone_temperature_" + "zone name
         :param y: (float)"""
         # NOTE: Using gradient decent $$self.params = self.param - self.learning_rate * 2 * (self._func(X, *params) - y) * features(X)
+
+        if self._params is None:
+            zone_col = X.columns[["zone_temperature_" in col for col in X.columns]]
+            filter_columns = ['t_in', 'a1', 'a2', 't_out', 'dt'] + list(zone_col)
+
+            # give mapping from params to coefficients and to store the order in which we get the columns.
+            self._filter_columns = filter_columns
+            self._params_order = ["a1", 'a2', 't_out', 'bias'] + list(zone_col)
+
+            self._params = np.ones((len(self._params_order)))
+
         loss = self._func(X[self._filter_columns].T.as_matrix(), *self._params)[0] - y
         adjust = self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
         self._params = self._params - adjust.reshape((adjust.shape[0])) # to make it the same dimensions as self._params
@@ -145,13 +156,13 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         prediction = self.predict(X)  # only need to predict for relevant actions
 
-        mean_error, rmse, std = self._normalizedRMSE_STD(X['dt'], prediction, y)
+        mean_error, rmse, std = self._normalizedRMSE_STD(prediction, y, X['dt'])
 
         # add model RMSE for reference.
         self.model_error.append({"mean": mean_error, "rmse": rmse, "std": std})
 
         # add trivial error for reference.
-        trivial_mean_error, trivial_rmse, trivial_std = self._normalizedRMSE_STD(X['dt'], X['t_in'], y)
+        trivial_mean_error, trivial_rmse, trivial_std = self._normalizedRMSE_STD(X['t_in'], y, X['dt'])
         self.baseline_error.append({"mean": trivial_mean_error, "rmse": trivial_rmse, "std": trivial_std})
 
         # to keep track of whether we are better than the baseline/trivial
@@ -303,11 +314,34 @@ if __name__ == '__main__':
     #
     # with open("../Thermal Data/thermal_model_demo", "wb") as f:
     #     pickle.dump(mpcThermalModel, f)
-    with open("/Thermal Data/ciee_thermal_data_demo") as f:
+    with open("../Thermal Data/ciee_thermal_data_demo") as f:
         therm_data = pickle.load(f)
 
-    model = MPCThermalModel(therm_data, 15)
-    for row in therm_data.itertuples():
+
+    # some basic evaluations of gradient decent
+    model = ThermalModel()
+    p = []
+    errs = []
+    one_zone = therm_data["HVAC_Zone_Eastzone"]
+    for row in one_zone.iterrows():
         idx, data = row[0], row[1]
+        data = data.to_frame().T
+        model.updateFit(data, float(data['t_next'][0]))
+        p.append(model._params)
+        errs.append((model.predict(data), data["t_next"]))
+
+    one_zone_newest = one_zone.iloc[-50:]
+
+    print(one_zone.shape)
+    print(any(one_zone_newest['action'] == 2))
+
+    print("newmodel rmse:", model.score(one_zone_newest, one_zone_newest["t_next"]))
+
+
+    old_model = ThermalModel()
+    old_model.fit(one_zone, one_zone["t_next"])
+
+    print("old model rmse: ", old_model.score(one_zone_newest, one_zone_newest["t_next"]))
+    print("baseline error: ", old_model.baseline_error)
 
 
