@@ -66,12 +66,6 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     if action == "0":
         heating_setpoint = tstat_temperature - advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
         cooling_setpoint = tstat_temperature + advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
-
-        cooling_setpoint = 68
-        heating_setpoint = 56
-
-        s_cooling = 70
-        s_heating = 60
         if heating_setpoint < safety_constraints[0][0]:
             heating_setpoint = safety_constraints[0][0]
 
@@ -211,6 +205,7 @@ if __name__ == '__main__':
     with open("Thermal Data/ciee_thermal_data_demo", "r") as f:
         thermal_data = pickle.load(f)
 
+    # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
     thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"])
     # with open("Thermal Data/thermal_model_demo", 'r') as f:
     #     thermal_model = pickle.load(f)

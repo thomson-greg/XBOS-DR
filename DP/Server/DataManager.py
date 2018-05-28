@@ -106,85 +106,6 @@ class DataManager:
 			return occupancy
 
 
-
-
-	def preprocess_therm(self):
-
-		#TODO get this done automated.
-		def f1(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['action'] == 1.:
-				val = 1
-			else:
-				val = 0
-			return val
-
-		# if state is 2 we are doing cooling
-		def f2(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['action'] == 2.:
-				val = 1
-			else:
-				val = 0
-			return val
-
-		def f3(row):
-			"""
-			helper function to format the thermal model dataframe
-			"""
-			if row['a'] > 0 and row['a'] <= 1.:
-				return 1
-			elif row['a'] > 1 and row['a'] <= 2.:
-				return 2
-			else:
-				return 0
-
-		uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_temperature"],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]["Thermostat_state"],
-				 self.advise_cfg["Data_Manager"]["UUIDS"]["Temperature_Outside"]]
-
-		# get the thermostat data
-		c = mdal.MDALClient("xbos/mdal", client=self.c)
-		dfs = c.do_query({'Composition': uuids,
-						  'Selectors': [mdal.MEAN, mdal.MAX, mdal.MEAN],
-						  'Time': {'T0': (self.now - timedelta(days=100)).strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'T1': self.now.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-								   'WindowSize': '1min',
-								   'Aligned': True}})
-
-		df = pd.concat([dframe for uid, dframe in dfs.items()], axis=1)
-		df = df.rename(columns={uuids[0]: 'tin', uuids[1]: 'a', uuids[2]:'t_out'})
-
-		# thermal data preprocess starts here
-		# TODO should we really make assumptions ?
-
-		df = df.fillna(method='pad')
-		df['a'] = df.apply(f3, axis=1)
-		df['tin'] = df['tin'].replace(to_replace=0, method='pad')
-		df['t_out'] = df['t_out'].replace(to_replace=0, method='pad')
-		df.dropna()
-
-		df['change_of_action'] = (df['a'].diff(1) != 0).astype('int').cumsum()
-
-		listerino = []
-		for j in df.change_of_action.unique():
-			for dfs in [df[df['change_of_action'] == j][i:i + self.interval] for i in
-						range(0, df[df['change_of_action'] == j].shape[0], self.interval)]:
-				listerino.append({'time': dfs.index[0],
-								  'tin': dfs['tin'][0],
-								  't_next': dfs['tin'][-1],
-								  'dt': dfs.shape[0],
-								  'tout': dfs['t_out'][0],
-								  'action': dfs['a'][0]})
-		df = pd.DataFrame(listerino).set_index('time')
-		df['a1'] = df.apply(f1, axis=1)
-		df['a2'] = df.apply(f2, axis=1)
-		return df.tz_localize(None)
-
 	def weather_fetch(self):
 		from dateutil import parser
 		coordinates = self.controller_cfg["Coordinates"]
@@ -197,6 +118,7 @@ class DataManager:
 				json.dump(data, f)
 
 		myweather = json.load(open("weather.json"))
+		# got an error on parse in the next line that properties doesnt exit
 		json_start = parser.parse(myweather["properties"]["periods"][0]["startTime"])
 		if (json_start.hour < self.now.astimezone(tz=pytz.timezone(self.pytz_timezone)).hour) or \
 				(datetime.datetime(json_start.year, json_start.month, json_start.day).replace(tzinfo=pytz.timezone(self.pytz_timezone)) <
@@ -349,8 +271,6 @@ if __name__ == '__main__':
 
 	print "Weather Predictions:"
 	print dm.weather_fetch()
-	print "Thermal Data:"
-	print dm.preprocess_therm()
 	print "Occupancy Data"
 	print dm.preprocess_occ()
 	print "Thermostat Setpoints:"
