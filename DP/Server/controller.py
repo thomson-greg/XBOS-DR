@@ -62,35 +62,61 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         print exception
         return False
 
-    # action "0" is Do Nothing, action "1" is Cooling, action "2" is Heating
+    # action "0" is Do Nothing, action "1" is Heating, action "2" is Cooling
     if action == "0":
-        heating_setpoint = math.floor(tstat_temperature - 0.1) - advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
-        cooling_setpoint = math.ceil(tstat_temperature + 0.1) + advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
+        heating_setpoint = tstat_temperature - advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
+        cooling_setpoint = tstat_temperature + advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
+
+        cooling_setpoint = 68
+        heating_setpoint = 56
+
+        s_cooling = 70
+        s_heating = 60
         if heating_setpoint < safety_constraints[0][0]:
             heating_setpoint = safety_constraints[0][0]
-            cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+            if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
+                cooling_setpoint = min(safety_constraints[0][1], heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"])
+
         elif cooling_setpoint > safety_constraints[0][1]:
             cooling_setpoint = safety_constraints[0][1]
-            heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+            if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
+                heating_setpoint = max(safety_constraints[0][0],
+                                       cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Doing nothing"
 
+    # TODO Rethink how we set setpoints for heating and cooling
     elif action == "1":
-        heating_setpoint = math.ceil(tstat_temperature + 0.1) + advise_cfg["Advise"]["Hysterisis"]
+        heating_setpoint = tstat_temperature + 2*advise_cfg["Advise"]["Hysterisis"]
         cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+
         if cooling_setpoint > safety_constraints[0][1]:
             cooling_setpoint = safety_constraints[0][1]
-            heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+            #making sure we are in the comfortband
+            if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
+                heating_setpoint = max(safety_constraints[0][0],
+                                       cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"])
+
+
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Heating"
 
     elif action == "2":
-        cooling_setpoint = math.floor(tstat_temperature - 0.1) - advise_cfg["Advise"]["Hysterisis"]
+        cooling_setpoint = tstat_temperature - 2*advise_cfg["Advise"]["Hysterisis"]
         heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+
         if heating_setpoint < safety_constraints[0][0]:
             heating_setpoint = safety_constraints[0][0]
-            cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
+
+            #making sure we are in the comfortband
+            if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
+                cooling_setpoint = min(safety_constraints[0][1], heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Cooling"

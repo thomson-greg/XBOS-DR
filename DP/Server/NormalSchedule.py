@@ -27,6 +27,10 @@ class NormalSchedule:
             else:
                 return True
 
+        def getDatetime(date_string):
+            """Gets datetime from string with format HH:MM. Should be changed to datetime in-built function. """
+            return datetime.time(int(date_string.split(":")[0]), int(date_string.split(":")[1]))
+
         setpoints_array = self.advise_cfg["Advise"]["Baseline"][self.now.weekday()]
 
         for j in setpoints_array:
@@ -44,11 +48,11 @@ class NormalSchedule:
         if not isinstance(SetpointHigh, (int, float, long)):
             SetpointHigh = Safety_temps[0][1]
 
-        if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), datetime.time(int(self.cfg["Pricing"]["DR_Start"].split(":")[0])), int(self.cfg["Pricing"]["DR_Finish"].split(":")[1]))) \
+
+        if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), getDatetime(self.cfg["Pricing"]["DR_Start"]), getDatetime(self.cfg["Pricing"]["DR_Start"]))) \
                 or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
             SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
             SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
-
 
         # Making sure that the different between setpointHigh and Low is at least the Comfortband
         if SetpointHigh - SetpointLow < self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
