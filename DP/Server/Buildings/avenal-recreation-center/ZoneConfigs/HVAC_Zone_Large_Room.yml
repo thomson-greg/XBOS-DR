@@ -1,0 +1,53 @@
+Zone: HVAC_Zone_Large_Room
+Advise:
+  Print_Graph: False
+  Heating_Consumption: 0.075  #kW ??
+  Cooling_Consumption: 5.5  #kW
+  Ventilation_Consumption: 0.01 #kW ??
+  Hysterisis: 1. #F
+  Minimum_Comfortband_Height: 4. #F
+  MPC: True
+  General_Lambda: 0.995 #0-1
+  DR_Lambda: 0.995 #0-1
+  MPCPredictiveHorizon: 4 #Hours
+  Max_Actions: 400 #int
+  Thermal_Precision: 400. #Float
+  Occupancy_Obs_Len_Addition: 4 #Hours
+  Baseline_Dr_Extend_Percent: 20. #Percentage
+  Occupancy_Sensors: False
+
+##COMFORTBAND setpoint temps if the space is occupied - even if someone is there at night, ideal setpoint during all periods, during non-PDP/DR event days (schedule they have right now).
+  #TODO NONE IS ONLY IMPLEMENTED FOR THE BASELINE, IMPLEMENT IT FOR THE COMFORTBAND TOO
+  Comfortband: {0: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 74.], ["18:00", "00:00", None, None]],
+                1: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 74.], ["18:00", "00:00", None, None]],
+                2: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 74.], ["18:00", "00:00", None, None]],
+                3: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 74.], ["18:00", "00:00", None, None]],
+                4: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 74.], ["18:00", "00:00", None, None]],
+                5: [["00:00", "00:00", None, None]],
+                6: [["00:00", "00:00", None, None]]}
+
+  Occupancy: {0: [["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
+              1: [["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
+              2: [["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
+              3: [["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
+              4: [["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
+              5: [["00:00", "00:00", 0]],
+              6: [["00:00", "00:00", 0]]}
+
+## BASELINE subset of the comfort band, target during the PDP/DR event if the MPC isn’t going (adjusted schedule for a static response to the PDP/DR event).
+  Baseline: { 0: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 78.], ["18:00", "00:00", None, None]],
+              1: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 78.], ["18:00", "00:00", None, None]],
+              2: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 78.], ["18:00", "00:00", None, None]],
+              3: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 78.], ["18:00", "00:00", None, None]],
+              4: [["00:00", "07:00", None, None], ["07:00", "18:00", 71., 78.], ["18:00", "00:00", None, None]],
+              5: [["00:00", "00:00", None, None]],
+              6: [["00:00", "00:00", None, None]]}
+              ##from Irina’s 5-25-18 “Live with / Do not cross” numbers
+
+  SafetySetpoints: {0:[["00:00", "00:00", 54., 86.]],
+                    1:[["00:00", "00:00", 54., 86.]],
+                    2:[["00:00", "00:00", 54., 86.]],
+                    3:[["00:00", "00:00", 54., 86.]],
+                    4:[["00:00", "00:00", 54., 86.]],
+                    5:[["00:00", "00:00", 54., 86.]],
+                    6:[["00:00", "00:00", 54., 86.]]}
