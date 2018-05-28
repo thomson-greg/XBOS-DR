@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, scoreType=-1, thermal_precision=1):
+    def __init__(self, scoreType=-1, thermal_precision=2):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
@@ -31,37 +31,30 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         self.scoreTypeList = []  # to know which action each rmse belongs to.
         self.betterThanBaseline = []
 
-        self.thermalPrecision=thermal_precision
-        self.learning_rate  = 0.01 # TODO make input and evaluate which one is best.
+        self.thermalPrecision = thermal_precision
+        self.learning_rate = 0.0001  # TODO make input and evaluate which one is best.
 
     # thermal model function
     def _func(self, X, *coeff):
         """The polynomial with which we model the thermal model.
-        :param X: pd.df with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all 
-        have to begin with "zone_temperature_" + "zone name"
-        :param *coeff: the coefficients for the thermal model. Should be in order: Tin, a1, a2, (Tout - Tin),
+        :param X: np.array with column order (Tin, a1, a2, Tout, dt, rest of zone temperatures)
+        :param *coeff: the coefficients for the thermal model. Should be in order: a1, a2, (Tout - Tin),
          bias, zones coeffs (as given by self._params_order)
         """
-        Tin, a1, a2, Tout, dt, zone_temperatures = X[0], X[1], X[2], X[3], X[4], X[5:]
-
-        c1, c2, c3, c4, c_rest = coeff[0], coeff[1], coeff[2], coeff[3], coeff[4:]
-
-        # putting together the function
-        first_half = c1 * a1 * Tin + c2 * a2 * Tin + c3 * (Tout - Tin) + c4
-        second_half = 0
-        for c, zone_temp in zip(c_rest, zone_temperatures):
-            diff = zone_temp - Tin
-            second_half += c * diff
-        return Tin + (first_half + second_half) * dt
+        features = self._features(X)
+        Tin = X[0]
+        return Tin + features.T.dot(np.array(coeff))
 
     def _features(self, X):
+        """Returns the features we are using as a matrix.
+        :param X: A matrix with column order (Tin, a1, a2, Tout, dt, rest of zone temperatures)
+        :return np.matrix. each column corresponding to the features in the order of self._param_order"""
         Tin, a1, a2, Tout, dt, zone_temperatures = X[0], X[1], X[2], X[3], X[4], X[5:]
-        features = [a1, a2, Tout - Tin, 1]
+        features = [a1, a2, Tout - Tin, np.ones(X.shape[1])]
         for zone_temp in zone_temperatures:
             features.append(zone_temp - Tin)
 
-        return np.array(features)
-
+        return np.array(features) * np.array(dt)
 
     def fit(self, X, y=None):
         """Needs to be called to fit the model. Will set self._params to coefficients. 
@@ -90,17 +83,14 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         return self
 
     def updateFit(self, X, y):
-        """Adaptive Learning. The data given will all be given the same weight when learning.
+        """Adaptive Learning for one datapoint. The data given will all be given the same weight when learning.
         :param X: (pd.df) with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperature where all have 
         to begin with "zone_temperature_" + "zone name
         :param y: (float)"""
-        # fit the data. we start our guess with all ones for coefficients.
-        # Need to do so to be able to generalize to variable number of zones.
         # NOTE: Using gradient decent $$self.params = self.param - self.learning_rate * 2 * (self._func(X, *params) - y) * features(X)
         loss = self._func(X[self._filter_columns].T.as_matrix(), *self._params)[0] - y
-        adjust =  self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
-        self._params = np.array(self._params) - adjust
-
+        adjust = self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
+        self._params = self._params - adjust.reshape((adjust.shape[0])) # to make it the same dimensions as self._params
 
     def predict(self, X, y=None):
         """Predicts the temperatures for each row in X.
@@ -172,11 +162,15 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 class MPCThermalModel:
     """Class specifically designed for the MPC process. A container class for ThermalModels for each class with functions
         designed to simplify usage."""
+
     def __init__(self, thermal_data, interval_length):
         """
         :param thermal_data: {"zone": pd.df thermal data for zone}
         :param interval_length: 
         """
+        self._oldParams = {}
+
+
         self.zoneThermalModels = self.fit_zones(thermal_data)
         self.interval = interval_length  # new for predictions. Will be fixed right?
         # we will keep the temperatures constant throughout the MPC as an approximation.
@@ -185,8 +179,9 @@ class MPCThermalModel:
 
         self.weatherPredictions = None  # store weather predictions for whole class
 
-        self.lastAction = None # TODO Fix, absolute hack and not good. controller should store this.
+        self.lastAction = None  # TODO Fix, absolute hack and not good. controller should store this.
         self.now = None
+
 
     # TODO Fix, absolute hack and not good. controller should store this.
     def setLastActionAndTime(self, action, now):
@@ -212,7 +207,8 @@ class MPCThermalModel:
         action = self.lastAction
         t_out = self.weatherPredictions[self.now.hour]
         for zone in self.zoneTemperatures.keys():
-            X = {"a1": int(0 < action <= 1), "a2": int(1 < action <= 2), "dt": dt, "t_out": t_out, "t_in": self.zoneTemperatures[zone]}
+            X = {"a1": int(0 < action <= 1), "a2": int(1 < action <= 2), "dt": dt, "t_out": t_out,
+                 "t_in": self.zoneTemperatures[zone]}
 
             # Not most loop efficient but fine for now.
             for key_zone, val in self.zoneTemperatures.items():
@@ -222,6 +218,10 @@ class MPCThermalModel:
             X = pd.DataFrame(X, index=[0])
             # online learning the new data
             self.zoneThermalModels[zone].updateFit(X, y)
+            # store the params for potential evaluations.
+            self._oldParams[zone].append(self.zoneThermalModels[zone]._params)
+            # to make sure oldParams holds no more than 50 values for each zone
+            self._oldParams[zone] = self._oldParams[-50:]
 
         self.zoneTemperatures = zone_temps
 
@@ -231,9 +231,12 @@ class MPCThermalModel:
         zoneModels = {}
         for zone, val in data.items():
             zoneModels[zone] = ThermalModel().fit(val, val["t_next"])
+            self._oldParams[zone] = []
+            self._oldParams[zone].append(zoneModels[zone]._params)
+
         return zoneModels
 
-    def predict(self, t_in, zone, action, outside_temperature=None, interval=None, time=-1):
+    def predict(self, t_in, zone, action, time=-1, outside_temperature=None, interval=None):
         """
         Predicts temperature for zone given.
         :param t_in: 
@@ -286,19 +289,25 @@ class MPCThermalModel:
 
 
 if __name__ == '__main__':
-
-
     with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_CentralZone.yml", 'r') as ymlfile:
         advise_cfg = yaml.load(ymlfile)
 
     import pickle
 
-    therm_data_file = open("../Thermal Data/ciee_thermal_data_demo")
-    therm_data = pickle.load(therm_data_file)
+    # therm_data_file = open("../Thermal Data/ciee_thermal_data_demo")
+    # therm_data = pickle.load(therm_data_file)
+    #
+    # therm_data_file.close()
+    #
+    # mpcThermalModel = MPCThermalModel(therm_data, 15)
+    #
+    # with open("../Thermal Data/thermal_model_demo", "wb") as f:
+    #     pickle.dump(mpcThermalModel, f)
+    with open("/Thermal Data/ciee_thermal_data_demo") as f:
+        therm_data = pickle.load(f)
 
-    therm_data_file.close()
+    model = MPCThermalModel(therm_data, 15)
+    for row in therm_data.itertuples():
+        idx, data = row[0], row[1]
 
-    mpcThermalModel = MPCThermalModel(therm_data, 15)
 
-    with open("../Thermal Data/thermal_model_demo", "wb") as f:
-        pickle.dump(mpcThermalModel, f)

@@ -23,44 +23,44 @@ from xbos.devices.thermostat import Thermostat
 # the main controller
 def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
-    try:
-        tstat = tstats[zone]
-        dataManager = DataManager(cfg, advise_cfg, client, zone, now=now)
-        tstat_temperature = tstat.temperature
-        safety_constraints = dataManager.safety_constraints()
-        # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
-        # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
-        thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
-        thermal_model.setWeahterPredictions(dataManager.weather_fetch())
-        adv = Advise([zone],  # array because we might use more than one zone. Multiclass approach.
-                     now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
-                     dataManager.preprocess_occ(),
-                     [tstat_temperature],
-                     thermal_model,
-                     dataManager.prices(),
-                     advise_cfg["Advise"]["General_Lambda"],
-                     advise_cfg["Advise"]["DR_Lambda"],
-                     advise_cfg["Advise"]["Interval_Length"],
-                     advise_cfg["Advise"]["MPCPredictiveHorizon"],
-                     advise_cfg["Advise"]["Print_Graph"],
-                     advise_cfg["Advise"]["Heating_Consumption"],
-                     advise_cfg["Advise"]["Cooling_Consumption"],
-                     advise_cfg["Advise"]["Ventilation_Consumption"],
-                     advise_cfg["Advise"]["Thermal_Precision"],
-                     advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
-                     dataManager.building_setpoints(),
-                     advise_cfg["Advise"]["Occupancy_Sensors"],
-                     safety_constraints)
+    # try:
+    tstat = tstats[zone]
+    dataManager = DataManager(cfg, advise_cfg, client, zone, now=now)
+    tstat_temperature = tstat.temperature
+    safety_constraints = dataManager.safety_constraints()
+    # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
+    # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
+    thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
+    thermal_model.setWeahterPredictions(dataManager.weather_fetch())
+    adv = Advise([zone],  # array because we might use more than one zone. Multiclass approach.
+                 now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
+                 dataManager.preprocess_occ(),
+                 [tstat_temperature],
+                 thermal_model,
+                 dataManager.prices(),
+                 advise_cfg["Advise"]["General_Lambda"],
+                 advise_cfg["Advise"]["DR_Lambda"],
+                 advise_cfg["Advise"]["Interval_Length"],
+                 advise_cfg["Advise"]["MPCPredictiveHorizon"],
+                 advise_cfg["Advise"]["Print_Graph"],
+                 advise_cfg["Advise"]["Heating_Consumption"],
+                 advise_cfg["Advise"]["Cooling_Consumption"],
+                 advise_cfg["Advise"]["Ventilation_Consumption"],
+                 advise_cfg["Advise"]["Thermal_Precision"],
+                 advise_cfg["Advise"]["Occupancy_Obs_Len_Addition"],
+                 dataManager.building_setpoints(),
+                 advise_cfg["Advise"]["Occupancy_Sensors"],
+                 safety_constraints)
 
-        action = adv.advise()
-        thermal_model.setLastActionAndTime(action, now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))) # TODO Fix, absolute hack and not good. controller should store this.
+    action = adv.advise()
+    thermal_model.setLastActionAndTime(action, now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))) # TODO Fix, absolute hack and not good. controller should store this.
 
 
-    except Exception as exception:
-        # TODO Find a better way for exceptions
-        e = sys.exc_info()
-        print exception
-        return False
+    # except Exception as exception:
+    #     # TODO Find a better way for exceptions
+    #     e = sys.exc_info()
+    #     print exception
+    #     return False
 
     # action "0" is Do Nothing, action "1" is Heating, action "2" is Cooling
     if action == "0":
@@ -125,7 +125,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
             # TODO uncomment for actual MPC
-            tstat.write(p)
+            # tstat.write(p)
             break
         except:
             if i == advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
@@ -173,7 +173,6 @@ class ZoneThread(threading.Thread):
             else:
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
-
             print datetime.datetime.now()
             time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
             (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
