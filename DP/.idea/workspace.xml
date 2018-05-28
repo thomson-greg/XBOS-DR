@@ -12,11 +12,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="NormalSchedule.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="NormalSchedule.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="320">
-              <caret line="113" column="43" lean-forward="true" selection-start-line="113" selection-start-column="43" selection-end-line="113" selection-end-column="43" />
+            <state relative-caret-position="430">
+              <caret line="45" column="0" lean-forward="true" selection-start-line="45" selection-start-column="0" selection-end-line="45" selection-end-column="0" />
               <folding>
                 <element signature="e#0#15#0" expanded="true" />
               </folding>
@@ -56,7 +56,7 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="config_file.yml" pinned="false" current-in-tab="true">
+      <file leaf-file-name="config_file.yml" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Server/config_file.yml">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="75">
@@ -164,8 +164,8 @@
         <option value="$PROJECT_DIR$/Server/MPC/ThermalModel.py" />
         <option value="$PROJECT_DIR$/Server/MPC/Advise.py" />
         <option value="$PROJECT_DIR$/Server/controller.py" />
-        <option value="$PROJECT_DIR$/Server/NormalSchedule.py" />
         <option value="$PROJECT_DIR$/Server/config_file.yml" />
+        <option value="$PROJECT_DIR$/Server/NormalSchedule.py" />
       </list>
     </option>
   </component>
@@ -876,16 +876,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="320">
-          <caret line="113" column="43" lean-forward="true" selection-start-line="113" selection-start-column="43" selection-end-line="113" selection-end-column="43" />
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Server/Buildings/ciee/ZoneConfigs/HVAC_Zone_Centralzone.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="200">
@@ -931,6 +921,16 @@
         <state relative-caret-position="75">
           <caret line="5" column="32" lean-forward="true" selection-start-line="5" selection-start-column="32" selection-end-line="5" selection-end-column="32" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="430">
+          <caret line="45" column="0" lean-forward="true" selection-start-line="45" selection-start-column="0" selection-end-line="45" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

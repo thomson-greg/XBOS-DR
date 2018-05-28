@@ -44,7 +44,7 @@ class NormalSchedule:
         if not isinstance(SetpointHigh, (int, float, long)):
             SetpointHigh = Safety_temps[0][1]
 
-        if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), datetime.time(int(cfg["DR_Start"].split(":")[0]), int(cfg["DR_Finish"].split(":")[1])))) \
+        if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), datetime.time(int(self.cfg["DR_Start"].split(":")[0]), int(self.cfg["DR_Finish"].split(":")[1])))) \
                 or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
             SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
             SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
