@@ -206,8 +206,8 @@ if __name__ == '__main__':
         sys.exit("Please specify the building name as an argument")
 
     if Server == True:
-        Entity_File = "fill_this.ent"
-        Agent_IP = '1.3.3.7:1337'
+        Entity_File = "../thanos.ent"
+        Agent_IP = '172.17.0.1:28589'
         client = get_client(Agent_IP, Entity_File)
     else:
         client = get_client()
