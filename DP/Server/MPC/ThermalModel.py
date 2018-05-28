@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, thermal_precision=0.05, learning_rate = 0.0001, scoreType=-1,):
+    def __init__(self, thermal_precision=0.05, learning_rate = 0.00001, scoreType=-1,):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
