@@ -9,6 +9,7 @@ import pytz
 import yaml
 
 from DataManager import DataManager
+from ControllerDataManager import ControllerDataManager
 from NormalSchedule import NormalSchedule
 
 sys.path.insert(0, 'MPC')
@@ -62,7 +63,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                      advise_cfg["Advise"]["General_Lambda"],
                      advise_cfg["Advise"]["DR_Lambda"],
                      DR,
-                     advise_cfg["Advise"]["Interval_Length"],
+                     cfg["Interval_Length"],
                      advise_cfg["Advise"]["MPCPredictiveHorizon"],
                      advise_cfg["Advise"]["Print_Graph"],
                      advise_cfg["Advise"]["Heating_Consumption"],
@@ -217,13 +218,17 @@ if __name__ == '__main__':
         client = get_client()
 
     # TODO Uncomment when final. will get data for past 60 days.
-    # controller_dataManager = ControllerDataManager(cfg, client)
-    # # initialize and fit thermal model
-    # thermal_data = controller_dataManager.thermal_data()
+    controller_dataManager = ControllerDataManager(cfg, client)
+    # initialize and fit thermal model
+    thermal_data = controller_dataManager.thermal_data(days_back=10)
 
+    print("Got thermal data.")
     import pickle
 
-    with open("Thermal Data/demo_anmial_shelter", "r") as f:
+    with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
+        pickle.dump(thermal_data, f)
+
+    with open("Thermal Data/demo_" + cfg["Building"], "r") as f:
         thermal_data = pickle.load(f)
 
     # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
@@ -231,6 +236,7 @@ if __name__ == '__main__':
     thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"], thermal_precision=cfg["Thermal_Precision"])
     # with open("Thermal Data/thermal_model_demo", 'r') as f:
     #     thermal_model = pickle.load(f)
+    print("Trained Thermal Model")
     # -------------------
 
 
@@ -244,6 +250,19 @@ if __name__ == '__main__':
         ?tstat bf:uri ?uri .
         ?tstat bf:controls/bf:feeds ?zone .
         };""" % cfg["Building"]
+
+    # Start of FIX for missing Brick query
+    thermostat_query = """SELECT ?zone ?uri FROM  %s WHERE {
+              ?tstat rdf:type brick:Thermostat .
+              ?tstat bf:controls ?RTU .
+              ?RTU rdf:type brick:RTU .
+              ?RTU bf:feeds ?zone. 
+              ?zone rdf:type brick:HVAC_Zone .
+              ?tstat bf:uri ?uri.
+              };"""
+    q = thermostat_query % cfg["Building"]
+    # End of FIX - delete when Brick is fixed
+
 
     threads = []
     tstat_query_data = hc.do_query(q)['Rows']

@@ -249,7 +249,7 @@ class ControllerDataManager:
 
             zone_thermal_model_data[zone] = thermal_model_data
 
-            print('one loop done')
+            print('one zone preproccessed')
         return zone_thermal_model_data
 
     def thermal_data(self, start=None, end=None, days_back=60):
