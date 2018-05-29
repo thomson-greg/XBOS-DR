@@ -25,7 +25,7 @@
       <file leaf-file-name="ControllerDataManager.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Server/ControllerDataManager.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3911">
+            <state relative-caret-position="2064">
               <caret line="286" column="0" lean-forward="true" selection-start-line="286" selection-start-column="0" selection-end-line="286" selection-end-column="0" />
               <folding>
                 <element signature="e#250#284#0" expanded="false" />
@@ -920,7 +920,7 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Server/ControllerDataManager.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3911">
+        <state relative-caret-position="2064">
           <caret line="286" column="0" lean-forward="true" selection-start-line="286" selection-start-column="0" selection-end-line="286" selection-end-column="0" />
           <folding>
             <element signature="e#250#284#0" expanded="false" />
