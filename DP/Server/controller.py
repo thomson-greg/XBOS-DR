@@ -197,9 +197,8 @@ class ZoneThread(threading.Thread):
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(5)
-            # time.sleep(60. * float(cfg["Interval_Length"]) - (
-            # (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
+            time.sleep(60. * float(cfg["Interval_Length"]) - (
+            (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
 
 
 if __name__ == '__main__':
