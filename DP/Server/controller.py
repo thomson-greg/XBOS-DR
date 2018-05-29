@@ -43,7 +43,10 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
         # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
         thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
-        thermal_model.setWeahterPredictions(dataManager.weather_fetch())
+
+        weather = dataManager.weather_fetch()
+        thermal_model.setWeahterPredictions(weather)
+
         if (cfg["Pricing"]["DR"] and in_between(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])).time(),
                                                 getDatetime(cfg["Pricing"]["DR_Start"]), getDatetime(cfg["Pricing"]["DR_Finish"]))) \
                                                 or now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
@@ -193,8 +196,9 @@ class ZoneThread(threading.Thread):
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
-            (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+            time.sleep(5)
+            # time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
+            # (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
 
 
 if __name__ == '__main__':
@@ -213,7 +217,7 @@ if __name__ == '__main__':
     else:
         client = get_client()
 
-    # TODO Uncomment when final
+    # TODO Uncomment when final. will get data for past 60 days.
     # controller_dataManager = ControllerDataManager(cfg, client)
     # # initialize and fit thermal model
     # thermal_data = controller_dataManager.thermal_data()

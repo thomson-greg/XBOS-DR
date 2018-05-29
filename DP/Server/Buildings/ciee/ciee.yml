@@ -9,7 +9,7 @@ Coordinates: "37.8751,-122.2761"
 Building: "ciee"
 # for thermal model
 Max_Actions: 400 #int
-Thermal_Precision: 0.05. #float
+Thermal_Precision: 0.05 #float
 Interval_Length: 15 # min
 
 
