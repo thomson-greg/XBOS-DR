@@ -20,6 +20,17 @@ from xbos import get_client
 from xbos.services.hod import HodClient
 from xbos.devices.thermostat import Thermostat
 
+def in_between(now, start, end):
+    if start < end:
+        return start <= now < end
+    elif end < start:
+        return start <= now or now < end
+    else:
+        return True
+
+def getDatetime(date_string):
+    """Gets datetime from string with format HH:MM. Should be changed to datetime in-built function. """
+    return datetime.time(int(date_string.split(":")[0]), int(date_string.split(":")[1]))
 
 # the main controller
 def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
@@ -33,6 +44,12 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
         thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
         thermal_model.setWeahterPredictions(dataManager.weather_fetch())
+        if (cfg["Pricing"]["DR"] and in_between(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])).time(),
+                                                getDatetime(cfg["Pricing"]["DR_Start"]), getDatetime(cfg["Pricing"]["DR_Finish"]))) \
+                                                or now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
+            DR = True
+        else:
+            DR = False
         adv = Advise([zone],  # array because we might use more than one zone. Multiclass approach.
                      now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
                      dataManager.preprocess_occ(),
@@ -41,6 +58,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                      dataManager.prices(),
                      advise_cfg["Advise"]["General_Lambda"],
                      advise_cfg["Advise"]["DR_Lambda"],
+                     DR,
                      advise_cfg["Advise"]["Interval_Length"],
                      advise_cfg["Advise"]["MPCPredictiveHorizon"],
                      advise_cfg["Advise"]["Print_Graph"],
@@ -183,7 +201,7 @@ if __name__ == '__main__':
 
     # read from config file
     try:
-        yaml_filename = sys.argv[1]
+        yaml_filename = "Buildings/%s/%s.yml" % (sys.argv[1], sys.argv[1])
     except:
         sys.exit("Please specify the configuration file as: python2 controller.py config_file.yaml")
 
