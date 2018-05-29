@@ -145,13 +145,13 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         prediction = self.predict(X)  # only need to predict for relevant actions
 
-        mean_error, rmse, std = self._normalizedRMSE_STD(X['dt'], prediction, y)
+        mean_error, rmse, std = self._normalizedRMSE_STD(prediction, y, X['dt'])
 
         # add model RMSE for reference.
         self.model_error.append({"mean": mean_error, "rmse": rmse, "std": std})
 
         # add trivial error for reference.
-        trivial_mean_error, trivial_rmse, trivial_std = self._normalizedRMSE_STD(X['dt'], X['t_in'], y)
+        trivial_mean_error, trivial_rmse, trivial_std = self._normalizedRMSE_STD(X['t_in'], y, X['dt'])
         self.baseline_error.append({"mean": trivial_mean_error, "rmse": trivial_rmse, "std": trivial_std})
 
         # to keep track of whether we are better than the baseline/trivial
