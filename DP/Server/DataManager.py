@@ -28,7 +28,7 @@ class DataManager:
         self.advise_cfg = advise_cfg
         self.pytz_timezone = controller_cfg["Pytz_Timezone"]
         self.zone = zone
-        self.interval = advise_cfg["Advise"]["Interval_Length"]
+        self.interval = controller_cfg["Interval_Length"]
         self.now = now
         self.horizon = advise_cfg["Advise"]["MPCPredictiveHorizon"]
         self.c = client

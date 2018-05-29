@@ -196,9 +196,8 @@ class ZoneThread(threading.Thread):
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(5)
-            # time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
-            # (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+            time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
+            (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
 
 
 if __name__ == '__main__':
@@ -224,7 +223,7 @@ if __name__ == '__main__':
 
     import pickle
 
-    with open("Thermal Data/ciee_thermal_data_demo", "r") as f:
+    with open("Thermal Data/demo_anmial_shelter", "r") as f:
         thermal_data = pickle.load(f)
 
     # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
