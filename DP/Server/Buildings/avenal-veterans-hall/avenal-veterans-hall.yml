@@ -7,7 +7,7 @@ Coordinates: "36.002334,-120.1379788"
 
 # for thermal model
 Max_Actions: 400 #int
-Thermal_Precision: 400. #float
+Thermal_Precision: 0.05 #float
 Interval_Length: 15 # min
 
 
