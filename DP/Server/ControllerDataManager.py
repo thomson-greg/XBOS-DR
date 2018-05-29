@@ -272,7 +272,7 @@ class ControllerDataManager:
 
 if __name__ == '__main__':
 
-    with open("./Buildings/avenal-recreation-center/avenal-recreation-center.yml", 'r') as ymlfile:
+    with open("./Buildings/avenal-animal-shelter/avenal-animal-shelter.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
     if cfg["Server"]:
@@ -285,9 +285,9 @@ if __name__ == '__main__':
     # fetching data here
     z = dm.thermal_data(days_back=30)
 
-    # with open("Thermal Data/ciee_thermal_data_demo", "wb") as f:
-    #     pickle.dump(z, f)
-
+    with open("demo_anmial_shelter", "wb") as f:
+        pickle.dump(z, f)
+    print(z)
 
     # # plots the data here .
     # import matplotlib.pyplot as plt

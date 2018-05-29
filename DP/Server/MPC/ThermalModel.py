@@ -303,11 +303,13 @@ if __name__ == '__main__':
     #
     # with open("../Thermal Data/thermal_model_demo", "wb") as f:
     #     pickle.dump(mpcThermalModel, f)
-    with open("/Thermal Data/ciee_thermal_data_demo") as f:
+    with open("../Thermal Data/demo_anmial_shelter") as f:
         therm_data = pickle.load(f)
 
     model = MPCThermalModel(therm_data, 15)
-    for row in therm_data.itertuples():
-        idx, data = row[0], row[1]
+    r = therm_data["HVAC_Zone_Shelter_Corridor"].iloc[-1]
+    print(r)
+    print model.predict(t_in=r["t_in"], zone="HVAC_Zone_Shelter_Corridor", action=r["action"],outside_temperature=r["t_out"], interval=r["dt"])
+    print("hi")
 
 
