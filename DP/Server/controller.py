@@ -220,13 +220,13 @@ if __name__ == '__main__':
     # TODO Uncomment when final. will get data for past 60 days.
     controller_dataManager = ControllerDataManager(cfg, client)
     # initialize and fit thermal model
-    # thermal_data = controller_dataManager.thermal_data(days_back=10)
+    thermal_data = controller_dataManager.thermal_data(days_back=20)
     #
     # print("Got thermal data.")
     import pickle
-    #
-    # with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
-    #     pickle.dump(thermal_data, f)
+
+    with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
+        pickle.dump(thermal_data, f)
 
     with open("Thermal Data/demo_" + cfg["Building"], "r") as f:
         thermal_data = pickle.load(f)
