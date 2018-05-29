@@ -26,7 +26,7 @@ Advise:
     - ['00:00', '00:00', None, None]
     6:
     - ['00:00', '00:00', None, None]
-  Baseline_Dr_Extend_Percent: 10.0
+  Baseline_Dr_Extend_Percent: 5.0
   Comfortband:
     0:
     - ['00:00', '09:00', 54.0, 86.0]
@@ -56,7 +56,7 @@ Advise:
     - ['00:00', '00:00', 54.0, 86.0]
   Cooling_Consumption: 4.13
   Cooling_Consumption_Stage_2: 4.13
-  DR_Lambda: 0.5
+  DR_Lambda: 0.995
   General_Lambda: 0.995
   Heating_Consumption: 0.075
   Hysterisis: 1.0
