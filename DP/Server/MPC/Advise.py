@@ -4,6 +4,7 @@ import networkx as nx
 import plotly.offline as py
 import pytz
 import yaml
+import numpy as np
 
 from Discomfort import Discomfort
 from EnergyConsumption import EnergyConsumption

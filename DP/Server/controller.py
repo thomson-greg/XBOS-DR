@@ -197,8 +197,9 @@ class ZoneThread(threading.Thread):
                 normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(60. * float(cfg["Interval_Length"]) - (
-            (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
+            time.sleep(5)
+            # time.sleep(60. * float(cfg["Interval_Length"]) - (
+            # (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
 
 
 if __name__ == '__main__':
@@ -220,13 +221,13 @@ if __name__ == '__main__':
     # TODO Uncomment when final. will get data for past 60 days.
     controller_dataManager = ControllerDataManager(cfg, client)
     # initialize and fit thermal model
-    thermal_data = controller_dataManager.thermal_data(days_back=10)
-
-    print("Got thermal data.")
+    # thermal_data = controller_dataManager.thermal_data(days_back=10)
+    #
+    # print("Got thermal data.")
     import pickle
-
-    with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
-        pickle.dump(thermal_data, f)
+    #
+    # with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
+    #     pickle.dump(thermal_data, f)
 
     with open("Thermal Data/demo_" + cfg["Building"], "r") as f:
         thermal_data = pickle.load(f)

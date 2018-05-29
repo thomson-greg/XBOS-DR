@@ -16,8 +16,8 @@ Pricing:
   Energy_Rates: "TOU-Summer" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
   Holiday: False
   DR : True
-  DR_Start: "01:10"
-  DR_Finish: "01:30"
+  DR_Start: "13:00"
+  DR_Finish: "15:00"
   DR_Price: 0.858
   NON-TOU-Summer: [[["00:00", "00:00", 0.25]], [["00:00", "00:00", 0.25]]]
   NON-TOU-Winter: [[["00:00", "00:00", 0.19]], [["00:00", "00:00", 0.19]]]

@@ -25,9 +25,11 @@ class EnergyConsumption:
 
         if action == 'Heating' or action == '2':
             return (float(self.heat) * float(self.interval) / 60.) * float(self.prices[time])
+
         elif action == 'Cooling' or action == '1':
             return (float(self.cool) * float(self.interval) / 60.) * float(self.prices[time])
         elif action == 'Ventilation':
+
             return (float(self.vent) * float(self.interval) / 60.) * float(self.prices[time])
         elif action == 'Do Nothing' or action == '0':
             return 0

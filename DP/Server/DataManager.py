@@ -112,25 +112,27 @@ class DataManager:
 
     def weather_fetch(self, fetch_attempts=10):
         from dateutil import parser
+        file_name = "./weather/weather_" + self.zone + "_" + self.controller_cfg["Building"] + ".json"
+
         coordinates = self.controller_cfg["Coordinates"]
 
         weather_fetch_successful = False
         while not weather_fetch_successful and fetch_attempts > 0:
-            if not os.path.exists("weather.json"):
+            if not os.path.exists(file_name):
                 temp = requests.get("https://api.weather.gov/points/" + coordinates).json()
                 weather = requests.get(temp["properties"]["forecastHourly"])
                 data = weather.json()
-                with open('weather.json', 'w') as f:
+                with open(file_name, 'wb') as f:
                     json.dump(data, f)
 
             try:
-                with open("weather.json", 'r') as f:
+                with open(file_name, 'r') as f:
                     myweather = json.load(f)
                     weather_fetch_successful = True
-            except ValueError:
+            except:
                 # Error with reading json file. Refetching data.
                 print("Warning, received bad weather.json file. Refetching from archiver.")
-                os.remove("weather.json")
+                os.remove(file_name)
                 weather_fetch_successful = False
                 fetch_attempts -= 1
 
@@ -148,9 +150,9 @@ class DataManager:
             temp = requests.get("https://api.weather.gov/points/" + coordinates).json()
             weather = requests.get(temp["properties"]["forecastHourly"])
             data = weather.json()
-            with open('weather.json', 'w') as f:
+            with open(file_name, 'w') as f:
                 json.dump(data, f)
-            myweather = json.load(open("weather.json"))
+            myweather = json.load(open(file_name))
 
         weather_predictions = {}
 
