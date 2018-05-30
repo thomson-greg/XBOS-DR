@@ -9,16 +9,18 @@ from DataManager import DataManager
 # TODO DR EVENT needs fixing
 
 class NormalSchedule:
-    def __init__(self, cfg, t_stat, advise_cfg, now):
+    def __init__(self, cfg, t_stat, advise_cfg, now=None):
         """
         
         :param cfg: 
         :param t_stat: 
         :param advise_cfg: 
-        :param now: in UTC time
+        :param now: in UTC time. If None (so no now is passed), take the current time. 
         """
         self.cfg = cfg
         self.advise_cfg = advise_cfg
+        if now is None:
+            now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
         self.now = now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))
         print self.now
         self.tstat = t_stat

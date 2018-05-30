@@ -59,7 +59,7 @@ Advise:
   MPC: false
   MPCPredictiveHorizon: 4
   Max_Actions: 400
-  Minimum_Comfortband_Height: 4.0
+  Minimum_Comfortband_Height: 3
   Occupancy:
     0:
     - ['00:00', '09:00', 0]
