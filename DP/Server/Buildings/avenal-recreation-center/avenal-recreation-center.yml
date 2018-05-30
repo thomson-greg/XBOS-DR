@@ -14,7 +14,7 @@ Interval_Length: 15 # min
 Pricing:
   Energy_Rates: "TOU-Summer" # options are "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
   Holiday: False
-  DR : True
+  DR : False
   DR_Start: "14:00"
   DR_Finish: "18:00"
   DR_Price: 0.858
