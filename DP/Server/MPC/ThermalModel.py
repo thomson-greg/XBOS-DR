@@ -76,10 +76,6 @@ class ThermalModel(BaseEstimator, RegressorMixin):
                                p0=np.ones(len(
                                    self._params_order)))
         self._params = np.array(popt)
-        # score training data
-        for action in range(-1, 3):
-            self.score(X, y, scoreType=action)
-        # --------------------
         return self
 
     def updateFit(self, X, y):
@@ -92,7 +88,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         adjust = self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
         self._params = self._params - adjust.reshape((adjust.shape[0])) # to make it the same dimensions as self._params
 
-    def predict(self, X, y=None):
+    def predict(self, X, y=None, should_round=True):
         """Predicts the temperatures for each row in X.
         :param X: pd.df/pd.Series with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperatures where all 
         have to begin with "zone_temperature_" + "zone name"
@@ -106,9 +102,11 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         # assumes that pandas returns df in order of indexing when doing X[self._filter_columns].
         predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
-
-        # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
-        return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
+        if should_round:
+            # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
+            return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
+        else:
+            return predictions
 
     def _normalizedRMSE_STD(self, prediction, y, dt):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.
@@ -124,7 +122,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         diff_std = np.sqrt(np.mean(np.square(diff_scaled - mean_error)))
         return mean_error, rmse, diff_std
 
-    def score(self, X, y, sample_weight=None, scoreType=None):
+    def score(self, X, y, scoreType=None):
         """Scores the model on the dataset given by X and y."""
         if scoreType is None:
             scoreType = self.scoreType
@@ -303,13 +301,14 @@ if __name__ == '__main__':
     #
     # with open("../Thermal Data/thermal_model_demo", "wb") as f:
     #     pickle.dump(mpcThermalModel, f)
-    with open("../Thermal Data/demo_anmial_shelter") as f:
+    with open("../Thermal Data/demo_avenal-veterans-hall") as f:
         therm_data = pickle.load(f)
 
     model = MPCThermalModel(therm_data, 15)
-    r = therm_data["HVAC_Zone_Shelter_Corridor"].iloc[-1]
-    print(r)
-    print model.predict(t_in=r["t_in"], zone="HVAC_Zone_Shelter_Corridor", action=r["action"],outside_temperature=r["t_out"], interval=r["dt"])
-    print("hi")
+
+    # r = therm_data["HVAC_Zone_Shelter_Corridor"].iloc[-1]
+    # print(r)
+    # print model.predict(t_in=r["t_in"], zone="HVAC_Zone_Shelter_Corridor", action=r["action"],outside_temperature=r["t_out"], interval=r["dt"])
+    # print("hi")
 
 
