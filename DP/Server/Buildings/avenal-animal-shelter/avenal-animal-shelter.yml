@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : "avenal-animal-shelter"
 Entity_File: "./thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "36.0017702,-120.1134008"
 
 # for thermal model
