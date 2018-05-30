@@ -194,7 +194,7 @@ class ZoneThread(threading.Thread):
                         normal_schedule.normal_schedule()
                         break
             else:
-                normal_schedule = NormalSchedule(cfg, self.tstats[self.zone], advise_cfg)
+                normal_schedule = NormalSchedule(cfg, self.tstats[self.zone], advise_cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")))
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
             time.sleep(60. * float(cfg["Interval_Length"]) - (
