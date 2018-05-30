@@ -12,21 +12,11 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="avenal-veterans-hall.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-veterans-hall/avenal-veterans-hall.yml">
+      <file leaf-file-name="DataManager.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Server/DataManager.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="60">
-              <caret line="4" column="13" lean-forward="false" selection-start-line="4" selection-start-column="13" selection-end-line="4" selection-end-column="13" />
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="NormalSchedule.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="353">
-              <caret line="80" column="19" lean-forward="false" selection-start-line="80" selection-start-column="19" selection-end-line="80" selection-end-column="19" />
+            <state relative-caret-position="101">
+              <caret line="116" column="56" lean-forward="true" selection-start-line="116" selection-start-column="56" selection-end-line="116" selection-end-column="56" />
               <folding>
                 <element signature="e#0#15#0" expanded="true" />
               </folding>
@@ -34,11 +24,45 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ThermalDataCollector.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/MPC/ThermalDataCollector.py">
+      <file leaf-file-name="NormalSchedule.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="157">
-              <caret line="51" column="0" lean-forward="false" selection-start-line="51" selection-start-column="0" selection-end-line="57" selection-end-column="68" />
+            <state relative-caret-position="317">
+              <caret line="22" column="0" lean-forward="false" selection-start-line="22" selection-start-column="0" selection-end-line="22" selection-end-column="0" />
+              <folding>
+                <element signature="e#0#15#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="controller.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Server/controller.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="408">
+              <caret line="195" column="17" lean-forward="false" selection-start-line="195" selection-start-column="17" selection-end-line="195" selection-end-column="17" />
+              <folding>
+                <element signature="e#0#15#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="HVAC_Zone_Theater_2.yml" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Theater_2.yml">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="696">
+              <caret line="115" column="25" lean-forward="true" selection-start-line="115" selection-start-column="6" selection-end-line="115" selection-end-column="25" />
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="thermostat.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/../../.venv_ciee/lib/python2.7/site-packages/xbos/devices/thermostat.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="178">
+              <caret line="76" column="0" lean-forward="false" selection-start-line="76" selection-start-column="0" selection-end-line="76" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -54,129 +78,12 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="HVAC_Zone_Shelter_Corridor.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-animal-shelter/ZoneConfigs/HVAC_Zone_Shelter_Corridor.yml">
+      <file leaf-file-name="HVAC_Zone_Back_Hallway.yml" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Back_Hallway.yml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-737">
-              <caret line="3" column="35" lean-forward="false" selection-start-line="3" selection-start-column="24" selection-end-line="3" selection-end-column="35" />
-              <folding>
-                <marker date="1527637161054" expanded="true" signature="2531:2616" ph="\_ \_ \_ …\_ \_ \_ 6: &lt;3 items&gt;" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="HVAC_Zone_Large_Room.yml" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-recreation-center/ZoneConfigs/HVAC_Zone_Large_Room.yml">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="15">
-              <caret line="36" column="1" lean-forward="false" selection-start-line="36" selection-start-column="1" selection-end-line="36" selection-end-column="1" />
-              <folding>
-                <marker date="1527637160740" expanded="true" signature="0:2664" ph="Advise: &lt;20 keys&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1469:1470" ph="0.5" />
-                <marker date="1527637160740" expanded="true" signature="1489:1494" ph="0.995" />
-                <marker date="1527637160740" expanded="true" signature="1518:1523" ph="0.075" />
-                <marker date="1527637160740" expanded="true" signature="1538:1541" ph="1.0" />
-                <marker date="1527637160740" expanded="true" signature="1549:1553" ph="true" />
-                <marker date="1527637160740" expanded="true" signature="1595:1598" ph="400" />
-                <marker date="1527637160740" expanded="true" signature="1629:1632" ph="4.0" />
-                <marker date="1527637160740" expanded="true" signature="1635:2170" ph="Occupancy: &lt;7 keys&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1650:1736" ph="0: &lt;3 items&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1660:1667" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1669:1676" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1688:1695" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1697:1704" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1716:1723" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1725:1732" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1741:1827" ph="1: &lt;3 items&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1751:1758" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1760:1767" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1779:1786" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1788:1795" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1807:1814" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1816:1823" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1832:1918" ph="2: &lt;3 items&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1842:1849" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1851:1858" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1870:1877" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1879:1886" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1898:1905" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1907:1914" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1923:2009" ph="3: &lt;3 items&gt;" />
-                <marker date="1527637160740" expanded="true" signature="1933:1940" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="1942:1949" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1961:1968" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="1970:1977" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1989:1996" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="1998:2005" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2014:2100" ph="4: &lt;3 items&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2024:2031" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2033:2040" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="2052:2059" ph="07:00" />
-                <marker date="1527637160740" expanded="true" signature="2061:2068" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="2080:2087" ph="18:00" />
-                <marker date="1527637160740" expanded="true" signature="2089:2096" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2105:2135" ph="5: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2115:2122" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2124:2131" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2140:2170" ph="6: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2150:2157" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2159:2166" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2224:2229" ph="false" />
-                <marker date="1527637160740" expanded="true" signature="2245:2250" ph="false" />
-                <marker date="1527637160740" expanded="true" signature="2253:2577" ph="SafetySetpoints: &lt;7 keys&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2274:2313" ph="0: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2284:2291" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2293:2300" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2302:2306" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2308:2312" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2318:2357" ph="1: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2328:2335" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2337:2344" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2346:2350" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2352:2356" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2362:2401" ph="2: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2372:2379" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2381:2388" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2390:2394" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2396:2400" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2406:2445" ph="3: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2416:2423" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2425:2432" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2434:2438" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2440:2444" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2450:2489" ph="4: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2460:2467" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2469:2476" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2478:2482" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2484:2488" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2494:2533" ph="5: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2504:2511" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2513:2520" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2522:2526" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2528:2532" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2538:2577" ph="6: &lt;1 item&gt;" />
-                <marker date="1527637160740" expanded="true" signature="2548:2555" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2557:2564" ph="00:00" />
-                <marker date="1527637160740" expanded="true" signature="2566:2570" ph="54.0" />
-                <marker date="1527637160740" expanded="true" signature="2572:2576" ph="86.0" />
-                <marker date="1527637160740" expanded="true" signature="2599:2603" ph="0.05" />
-                <marker date="1527637160740" expanded="true" signature="2630:2632" ph="10" />
-                <marker date="1527637160740" expanded="true" signature="2660:2664" ph="0.01" />
-                <marker date="1527637160740" expanded="true" signature="2671:2691" ph="HVAC_Zone_Large_Room" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="controller.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Server/controller.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="687">
-              <caret line="264" column="0" lean-forward="true" selection-start-line="264" selection-start-column="0" selection-end-line="264" selection-end-column="0" />
-              <folding>
-                <element signature="e#0#15#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="120">
+              <caret line="8" column="29" lean-forward="false" selection-start-line="8" selection-start-column="25" selection-end-line="8" selection-end-column="29" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -191,11 +98,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="avenal-movie-theatre.yml" pinned="false" current-in-tab="true">
+      <file leaf-file-name="avenal-movie-theatre.yml" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/avenal-movie-theatre.yml">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="285">
-              <caret line="19" column="20" lean-forward="false" selection-start-line="19" selection-start-column="20" selection-end-line="19" selection-end-column="20" />
+            <state relative-caret-position="165">
+              <caret line="11" column="0" lean-forward="true" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
               <folding />
             </state>
           </provider>
@@ -238,6 +145,7 @@
       <find>thermos</find>
       <find>DR</find>
       <find>weather.json</find>
+      <find>self.tstat</find>
     </findStrings>
     <replaceStrings>
       <replace>self.client</replace>
@@ -280,11 +188,11 @@
         <option value="$PROJECT_DIR$/Server/Buildings/avenal-animal-shelter/ZoneConfigs/HVAC_Zone_Shelter_Corridor.yml" />
         <option value="$PROJECT_DIR$/Server/Buildings/avenal-public-works-yard/avenal-public-works-yard.yml" />
         <option value="$PROJECT_DIR$/Server/Buildings/avenal-recreation-center/avenal-recreation-center.yml" />
-        <option value="$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/avenal-movie-theatre.yml" />
-        <option value="$PROJECT_DIR$/Server/controller.py" />
         <option value="$PROJECT_DIR$/Server/Buildings/avenal-animal-shelter/avenal-animal-shelter.yml" />
         <option value="$PROJECT_DIR$/Server/Buildings/avenal-veterans-hall/avenal-veterans-hall.yml" />
+        <option value="$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/avenal-movie-theatre.yml" />
         <option value="$PROJECT_DIR$/Server/NormalSchedule.py" />
+        <option value="$PROJECT_DIR$/Server/controller.py" />
       </list>
     </option>
   </component>
@@ -379,54 +287,6 @@
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
             <PATH_ELEMENT>
-              <option name="myItemId" value="avenal-veterans-hall" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DP" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DP" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Server" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Buildings" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="avenal-veterans-hall" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="ZoneConfigs" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-          </PATH>
-          <PATH>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DP" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="DP" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Server" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
-              <option name="myItemId" value="Buildings" />
-              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-            </PATH_ELEMENT>
-            <PATH_ELEMENT>
               <option name="myItemId" value="avenal-recreation-center" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
@@ -498,6 +358,32 @@
             </PATH_ELEMENT>
             <PATH_ELEMENT>
               <option name="myItemId" value="avenal-movie-theatre" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+          </PATH>
+          <PATH>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="DP" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="DP" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Server" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="Buildings" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="avenal-movie-theatre" />
+              <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+            </PATH_ELEMENT>
+            <PATH_ELEMENT>
+              <option name="myItemId" value="ZoneConfigs" />
               <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
             </PATH_ELEMENT>
           </PATH>
@@ -662,7 +548,7 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <module name="DP" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Server/controller.py" />
-      <option name="PARAMETERS" value="avenal-veterans-hall" />
+      <option name="PARAMETERS" value="avenal-movie-theatre" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <method />
@@ -735,29 +621,17 @@
           <line>299</line>
           <option name="timeStamp" value="84" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Server/NormalSchedule.py</url>
-          <line>44</line>
-          <option name="timeStamp" value="88" />
-        </line-breakpoint>
       </breakpoints>
-      <option name="time" value="92" />
+      <option name="time" value="98" />
     </breakpoint-manager>
     <watches-manager>
       <configuration name="PythonConfigurationType">
         <watch expression="from_node" />
+        <watch expression="self.cfg" />
       </configuration>
     </watches-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/Server/Buildings/ciee/ciee.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="270">
-          <caret line="18" column="16" lean-forward="true" selection-start-line="18" selection-start-column="16" selection-end-line="18" selection-end-column="16" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/../../.venv_ciee/lib/python2.7/genericpath.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="345">
@@ -1212,16 +1086,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Server/DataManager.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="101">
-          <caret line="116" column="56" lean-forward="true" selection-start-line="116" selection-start-column="56" selection-end-line="116" selection-end-column="56" />
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Server/demo_anmial_shelter">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
@@ -1272,26 +1136,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Back_Hallway.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="0">
-          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Room_D.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="375">
           <caret line="25" column="14" lean-forward="false" selection-start-line="25" selection-start-column="14" selection-end-line="25" selection-end-column="14" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Theater_2.yml">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="930">
-          <caret line="62" column="12" lean-forward="false" selection-start-line="62" selection-start-column="7" selection-end-line="62" selection-end-column="12" />
           <folding />
         </state>
       </provider>
@@ -1572,26 +1420,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Server/controller.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="687">
-          <caret line="264" column="0" lean-forward="true" selection-start-line="264" selection-start-column="0" selection-end-line="264" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="353">
-          <caret line="80" column="19" lean-forward="false" selection-start-line="80" selection-start-column="19" selection-end-line="80" selection-end-column="19" />
-          <folding>
-            <element signature="e#0#15#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-veterans-hall/avenal-veterans-hall.yml">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="60">
@@ -1624,11 +1452,65 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Back_Hallway.yml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="120">
+          <caret line="8" column="29" lean-forward="false" selection-start-line="8" selection-start-column="25" selection-end-line="8" selection-end-column="29" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/avenal-movie-theatre.yml">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="285">
-          <caret line="19" column="20" lean-forward="false" selection-start-line="19" selection-start-column="20" selection-end-line="19" selection-end-column="20" />
+        <state relative-caret-position="165">
+          <caret line="11" column="0" lean-forward="true" selection-start-line="11" selection-start-column="0" selection-end-line="11" selection-end-column="0" />
           <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Server/DataManager.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="101">
+          <caret line="116" column="56" lean-forward="true" selection-start-line="116" selection-start-column="56" selection-end-line="116" selection-end-column="56" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/../../.venv_ciee/lib/python2.7/site-packages/xbos/devices/thermostat.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="178">
+          <caret line="76" column="0" lean-forward="false" selection-start-line="76" selection-start-column="0" selection-end-line="76" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Server/Buildings/avenal-movie-theatre/ZoneConfigs/HVAC_Zone_Theater_2.yml">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="696">
+          <caret line="115" column="25" lean-forward="true" selection-start-line="115" selection-start-column="6" selection-end-line="115" selection-end-column="25" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Server/NormalSchedule.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="317">
+          <caret line="22" column="0" lean-forward="false" selection-start-line="22" selection-start-column="0" selection-end-line="22" selection-end-column="0" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Server/controller.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="408">
+          <caret line="195" column="17" lean-forward="false" selection-start-line="195" selection-start-column="17" selection-end-line="195" selection-end-column="17" />
+          <folding>
+            <element signature="e#0#15#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
