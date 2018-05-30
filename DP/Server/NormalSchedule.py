@@ -61,8 +61,8 @@ class NormalSchedule:
         if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), getDatetime(self.cfg["Pricing"]["DR_Start"]),
                                                      getDatetime(self.cfg["Pricing"]["DR_Finish"]))) \
                 or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
-            SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
-            SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
+            SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]
+            SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]
 
         # Making sure that the different between setpointHigh and Low is at least the Comfortband
         if SetpointHigh - SetpointLow < self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
