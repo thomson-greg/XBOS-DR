@@ -4,6 +4,7 @@ import networkx as nx
 import plotly.offline as py
 import pytz
 import yaml
+import numpy as np
 
 from Discomfort import Discomfort
 from EnergyConsumption import EnergyConsumption
@@ -11,8 +12,6 @@ from Occupancy import Occupancy
 from Safety import Safety
 from ThermalModel import ThermalModel
 from utils import plotly_figure
-
-import numpy as np
 
 
 class Node:
@@ -121,7 +120,8 @@ class EVA:
                 new_temperature.append(self.th.predict(t_in=from_node.temps[i],
                                                        zone=self.zones[i],
                                                        action=int(action[i]),
-                                                       time=self.get_real_time(from_node.time).hour)[0])  # index because self.th.predict returns array.
+                                                       time=self.get_real_time(from_node.time).hour)[
+                                           0])  # index because self.th.predict returns array.
                 consumption.append(self.energy.calc_cost(action[i], from_node.time / self.interval))
 
             # create the node that describes the predicted data
@@ -132,7 +132,6 @@ class EVA:
 
             if self.safety.safety_check(new_temperature, new_node.time / self.interval) and len(action_set) > 1:
                 continue
-
 
             # calculate interval discomfort
             discomfort = [0] * self.noZones
@@ -191,7 +190,8 @@ class EVA:
 class Advise:
     # the Advise class initializes all the Models and runs the shortest path algorithm
     def __init__(self, zones, current_time, occupancy_data, zone_temperature, thermal_model,
-                 prices, lamda, dr_lamda, interval, predictions_hours, plot_bool, heating_cons, cooling_cons, vent_cons,
+                 prices, lamda, dr_lamda, dr, interval, predictions_hours, plot_bool, heating_cons, cooling_cons,
+                 vent_cons,
                  thermal_precision, occ_obs_len_addition, setpoints, sensors, safety_constraints):
         # TODO do something with dr_lambda and vent const (they are added since they are in the config file.)
         # TODO Also, thermal_precision
@@ -208,11 +208,14 @@ class Advise:
 
         Zones_Starting_Temps = zone_temperature
         self.root = Node(Zones_Starting_Temps, 0)
+        temp_l = dr_lamda if dr else lamda
+
+        print("Lambda being used for zone %s is of value %s" % (zones[0], str(temp_l)))
 
         # initialize the shortest path model
         self.advise_unit = EVA(
             current_time=self.current_time,
-            l=lamda,
+            l=temp_l,
             pred_window=predictions_hours * 60 / interval,
             interval=interval,
             discomfort=disc,
@@ -245,6 +248,8 @@ class Advise:
 if __name__ == '__main__':
     import sys
 
+    ZONE = "HVAC_Zone_Centralzone"
+
     sys.path.insert(0, '..')
     from DataManager import DataManager
     from xbos import get_client
@@ -252,7 +257,7 @@ if __name__ == '__main__':
     with open("../config_file.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
-    with open("../Buildings/ciee/ZoneConfigs/HVAC_Zone_Centralzone.yml", 'r') as ymlfile:
+    with open("../Buildings/ciee/ZoneConfigs/" + ZONE + ".yml", 'r') as ymlfile:
         advise_cfg = yaml.load(ymlfile)
 
     if cfg["Server"]:
@@ -274,7 +279,7 @@ if __name__ == '__main__':
 
     with open("../Thermal Data/ciee_thermal_data_demo", "r") as f:
         thermal_data = pickle.load(f)
-    dm = DataManager(cfg, advise_cfg, c, "HVAC_Zone_Centralzone")
+    dm = DataManager(cfg, advise_cfg, c, ZONE)
     tstat_query_data = hc.do_query(q)['Rows']
     tstats = {tstat["?zone"]: Thermostat(c, tstat["?uri"]) for tstat in tstat_query_data}
 
@@ -290,13 +295,12 @@ if __name__ == '__main__':
                  datetime.datetime.utcnow().replace(tzinfo=pytz.utc).astimezone(
                      tz=pytz.timezone("America/Los_Angeles")),
                  dm.preprocess_occ(),
-                 [70],
+                 [80],  # [{dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}[ZONE]],
                  thermal_model,
                  dm.prices(),
-                 0.995, 0.995, 15, 1, True, 0.075, 1.25, 0.01, 400., 4,
+                 0.995, 0.995, False, 15, 2, True, 0.075, 1.25, 0.01, 400., 4,
                  dm.building_setpoints(),
                  advise_cfg["Advise"]["Occupancy_Sensors"],
                  dm.safety_constraints())
 
-    print adv.advise()
     print adv.advise()

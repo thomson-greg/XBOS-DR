@@ -76,10 +76,6 @@ class ThermalModel(BaseEstimator, RegressorMixin):
                                p0=np.ones(len(
                                    self._params_order)))
         self._params = np.array(popt)
-        # score training data
-        for action in range(-1, 3):
-            self.score(X, y, scoreType=action)
-        # --------------------
         return self
 
     def updateFit(self, X, y):
@@ -88,22 +84,11 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         to begin with "zone_temperature_" + "zone name
         :param y: (float)"""
         # NOTE: Using gradient decent $$self.params = self.param - self.learning_rate * 2 * (self._func(X, *params) - y) * features(X)
-
-        if self._params is None:
-            zone_col = X.columns[["zone_temperature_" in col for col in X.columns]]
-            filter_columns = ['t_in', 'a1', 'a2', 't_out', 'dt'] + list(zone_col)
-
-            # give mapping from params to coefficients and to store the order in which we get the columns.
-            self._filter_columns = filter_columns
-            self._params_order = ["a1", 'a2', 't_out', 'bias'] + list(zone_col)
-
-            self._params = np.ones((len(self._params_order)))
-
         loss = self._func(X[self._filter_columns].T.as_matrix(), *self._params)[0] - y
         adjust = self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
         self._params = self._params - adjust.reshape((adjust.shape[0])) # to make it the same dimensions as self._params
 
-    def predict(self, X, y=None):
+    def predict(self, X, y=None, should_round=True):
         """Predicts the temperatures for each row in X.
         :param X: pd.df/pd.Series with columns ('t_in', 'a1', 'a2', 't_out', 'dt') and all zone temperatures where all 
         have to begin with "zone_temperature_" + "zone name"
@@ -117,9 +102,11 @@ class ThermalModel(BaseEstimator, RegressorMixin):
 
         # assumes that pandas returns df in order of indexing when doing X[self._filter_columns].
         predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
-
-        # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
-        return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
+        if should_round:
+            # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
+            return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
+        else:
+            return predictions
 
     def _normalizedRMSE_STD(self, prediction, y, dt):
         '''Computes the RMSE with scaled differences to normalize to 15 min intervals.
@@ -135,7 +122,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         diff_std = np.sqrt(np.mean(np.square(diff_scaled - mean_error)))
         return mean_error, rmse, diff_std
 
-    def score(self, X, y, sample_weight=None, scoreType=None):
+    def score(self, X, y, scoreType=None):
         """Scores the model on the dataset given by X and y."""
         if scoreType is None:
             scoreType = self.scoreType
@@ -314,34 +301,14 @@ if __name__ == '__main__':
     #
     # with open("../Thermal Data/thermal_model_demo", "wb") as f:
     #     pickle.dump(mpcThermalModel, f)
-    with open("../Thermal Data/ciee_thermal_data_demo") as f:
+    with open("../Thermal Data/demo_avenal-veterans-hall") as f:
         therm_data = pickle.load(f)
 
+    model = MPCThermalModel(therm_data, 15)
 
-    # some basic evaluations of gradient decent
-    model = ThermalModel()
-    p = []
-    errs = []
-    one_zone = therm_data["HVAC_Zone_Eastzone"]
-    for row in one_zone.iterrows():
-        idx, data = row[0], row[1]
-        data = data.to_frame().T
-        model.updateFit(data, float(data['t_next'][0]))
-        p.append(model._params)
-        errs.append((model.predict(data), data["t_next"]))
-
-    one_zone_newest = one_zone.iloc[-50:]
-
-    print(one_zone.shape)
-    print(any(one_zone_newest['action'] == 2))
-
-    print("newmodel rmse:", model.score(one_zone_newest, one_zone_newest["t_next"]))
-
-
-    old_model = ThermalModel()
-    old_model.fit(one_zone, one_zone["t_next"])
-
-    print("old model rmse: ", old_model.score(one_zone_newest, one_zone_newest["t_next"]))
-    print("baseline error: ", old_model.baseline_error)
+    # r = therm_data["HVAC_Zone_Shelter_Corridor"].iloc[-1]
+    # print(r)
+    # print model.predict(t_in=r["t_in"], zone="HVAC_Zone_Shelter_Corridor", action=r["action"],outside_temperature=r["t_out"], interval=r["dt"])
+    # print("hi")
 
 

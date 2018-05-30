@@ -9,6 +9,7 @@ import pytz
 import yaml
 
 from DataManager import DataManager
+from ControllerDataManager import ControllerDataManager
 from NormalSchedule import NormalSchedule
 
 sys.path.insert(0, 'MPC')
@@ -20,6 +21,17 @@ from xbos import get_client
 from xbos.services.hod import HodClient
 from xbos.devices.thermostat import Thermostat
 
+def in_between(now, start, end):
+    if start < end:
+        return start <= now < end
+    elif end < start:
+        return start <= now or now < end
+    else:
+        return True
+
+def getDatetime(date_string):
+    """Gets datetime from string with format HH:MM. Should be changed to datetime in-built function. """
+    return datetime.time(int(date_string.split(":")[0]), int(date_string.split(":")[1]))
 
 # the main controller
 def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
@@ -32,7 +44,16 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
         # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
         thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
-        thermal_model.setWeahterPredictions(dataManager.weather_fetch())
+
+        weather = dataManager.weather_fetch()
+        thermal_model.setWeahterPredictions(weather)
+
+        if (cfg["Pricing"]["DR"] and in_between(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])).time(),
+                                                getDatetime(cfg["Pricing"]["DR_Start"]), getDatetime(cfg["Pricing"]["DR_Finish"]))) \
+                                                or now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
+            DR = True
+        else:
+            DR = False
         adv = Advise([zone],  # array because we might use more than one zone. Multiclass approach.
                      now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
                      dataManager.preprocess_occ(),
@@ -41,7 +62,8 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                      dataManager.prices(),
                      advise_cfg["Advise"]["General_Lambda"],
                      advise_cfg["Advise"]["DR_Lambda"],
-                     advise_cfg["Advise"]["Interval_Length"],
+                     DR,
+                     cfg["Interval_Length"],
                      advise_cfg["Advise"]["MPCPredictiveHorizon"],
                      advise_cfg["Advise"]["Print_Graph"],
                      advise_cfg["Advise"]["Heating_Consumption"],
@@ -172,18 +194,18 @@ class ZoneThread(threading.Thread):
                         normal_schedule.normal_schedule()
                         break
             else:
-                normal_schedule = NormalSchedule(cfg, self.tstats[zone], advise_cfg)
+                normal_schedule = NormalSchedule(cfg, self.tstats[self.zone], advise_cfg)
                 normal_schedule.normal_schedule()
             print datetime.datetime.now()
-            time.sleep(60. * float(advise_cfg["Advise"]["Interval_Length"]) - (
-            (time.time() - starttime) % (60. * float(advise_cfg["Advise"]["Interval_Length"]))))
+            time.sleep(60. * float(cfg["Interval_Length"]) - (
+            (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
 
 
 if __name__ == '__main__':
 
     # read from config file
     try:
-        yaml_filename = sys.argv[1]
+        yaml_filename = "Buildings/%s/%s.yml" % (sys.argv[1], sys.argv[1])
     except:
         sys.exit("Please specify the configuration file as: python2 controller.py config_file.yaml")
 
@@ -195,21 +217,31 @@ if __name__ == '__main__':
     else:
         client = get_client()
 
-    # TODO Uncomment when final
-    # controller_dataManager = ControllerDataManager(cfg, client)
-    # # initialize and fit thermal model
-    # thermal_data = controller_dataManager.thermal_data()
-
+    # TODO Uncomment when final. will get data for past 60 days.
+    controller_dataManager = ControllerDataManager(cfg, client)
+    # initialize and fit thermal model
+    thermal_data = controller_dataManager.thermal_data(days_back=20)
+    #
+    # print("Got thermal data.")
     import pickle
+    try:
+        with open("Thermal Data/demo_" + cfg["Building"], "r") as f:
+            thermal_data = pickle.load(f)
 
-    with open("Thermal Data/ciee_thermal_data_demo", "r") as f:
-        thermal_data = pickle.load(f)
+    except:
+        thermal_data = controller_dataManager.thermal_data(days_back=5)
+        with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
+            pickle.dump(thermal_data, f)
+
+
+
 
     # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
     # TODO Add thermal precision from config.
     thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"], thermal_precision=cfg["Thermal_Precision"])
     # with open("Thermal Data/thermal_model_demo", 'r') as f:
     #     thermal_model = pickle.load(f)
+    print("Trained Thermal Model")
     # -------------------
 
 
@@ -224,11 +256,25 @@ if __name__ == '__main__':
         ?tstat bf:controls/bf:feeds ?zone .
         };""" % cfg["Building"]
 
+    # Start of FIX for missing Brick query
+    thermostat_query = """SELECT ?zone ?uri FROM  %s WHERE {
+              ?tstat rdf:type brick:Thermostat .
+              ?tstat bf:controls ?RTU .
+              ?RTU rdf:type brick:RTU .
+              ?RTU bf:feeds ?zone. 
+              ?zone rdf:type brick:HVAC_Zone .
+              ?tstat bf:uri ?uri.
+              };"""
+    q = thermostat_query % cfg["Building"]
+    # End of FIX - delete when Brick is fixed
+
+
+
     threads = []
     tstat_query_data = hc.do_query(q)['Rows']
     tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in tstat_query_data}
+
     for zone, tstat in tstats.items():
-        print tstat
         thread = ZoneThread(yaml_filename, tstats, zone, client, thermal_model)
         thread.start()
         threads.append(thread)

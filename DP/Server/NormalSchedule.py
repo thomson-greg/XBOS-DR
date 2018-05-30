@@ -9,9 +9,18 @@ from DataManager import DataManager
 # TODO DR EVENT needs fixing
 
 class NormalSchedule:
-    def __init__(self, cfg, t_stat, advise_cfg, now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+    def __init__(self, cfg, t_stat, advise_cfg, now=None):
+        """
+        
+        :param cfg: 
+        :param t_stat: 
+        :param advise_cfg: 
+        :param now: in UTC time. If None (so no now is passed), take the current time. 
+        """
         self.cfg = cfg
         self.advise_cfg = advise_cfg
+        if now is None:
+            now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
         self.now = now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))
         print self.now
         self.tstat = t_stat
@@ -52,8 +61,8 @@ class NormalSchedule:
         if (self.cfg["Pricing"]["DR"] and in_between(self.now.time(), getDatetime(self.cfg["Pricing"]["DR_Start"]),
                                                      getDatetime(self.cfg["Pricing"]["DR_Finish"]))) \
                 or self.now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
-            SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointHigh
-            SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"] / 100. * SetpointLow
+            SetpointHigh += self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]
+            SetpointLow -= self.advise_cfg["Advise"]["Baseline_Dr_Extend_Percent"]
 
         # Making sure that the different between setpointHigh and Low is at least the Comfortband
         if SetpointHigh - SetpointLow < self.advise_cfg["Advise"]["Minimum_Comfortband_Height"]:

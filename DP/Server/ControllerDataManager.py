@@ -63,6 +63,19 @@ class ControllerDataManager:
 			  ?status_point bf:uuid ?uuid.
 			};"""
 
+        # Start of FIX for missing Brick query
+        thermostat_status_query = """SELECT ?zone ?uuid FROM  %s WHERE {
+                                 ?tstat rdf:type brick:Thermostat .
+                                 ?tstat bf:controls ?RTU .
+                                 ?RTU rdf:type brick:RTU .
+                                 ?RTU bf:feeds ?zone. 
+                                 ?zone rdf:type brick:HVAC_Zone .
+                                 ?status_point bf:isPointOf ?tstat .
+                                  ?status_point rdf:type brick:Thermostat_Status .
+                                  ?status_point bf:uuid ?uuid.
+                                 };"""
+        # End of FIX - delete when Brick is fixed
+
         thermostat_temperature_query = """SELECT ?zone ?uuid FROM %s WHERE { 
 			  ?tstat rdf:type brick:Thermostat .
 			  ?tstat bf:hasLocation/bf:isPartOf ?location_zone .
@@ -75,6 +88,19 @@ class ControllerDataManager:
 			  ?thermostat_point rdf:type brick:Temperature_Sensor .
 			  ?thermostat_point bf:uuid ?uuid.
 			};"""
+
+        # Start of FIX for missing Brick query
+        thermostat_temperature_query = """SELECT ?zone ?uuid FROM  %s WHERE {
+                          ?tstat rdf:type brick:Thermostat .
+                          ?tstat bf:controls ?RTU .
+                          ?RTU rdf:type brick:RTU .
+                          ?RTU bf:feeds ?zone. 
+                          ?zone rdf:type brick:HVAC_Zone .
+                          ?thermostat_point bf:isPointOf ?tstat .
+                          ?thermostat_point rdf:type brick:Temperature_Sensor .
+                          ?thermostat_point bf:uuid ?uuid.
+                          };"""
+        # End of FIX - delete when Brick is fixed
 
         outside_temperature_query = """SELECT ?weather_station ?uuid FROM %s WHERE {
 				?weather_station rdf:type brick:Weather_Temperature_Sensor.
@@ -223,7 +249,7 @@ class ControllerDataManager:
 
             zone_thermal_model_data[zone] = thermal_model_data
 
-            print('one loop done')
+            print('one zone preproccessed')
         return zone_thermal_model_data
 
     def thermal_data(self, start=None, end=None, days_back=60):
@@ -246,7 +272,7 @@ class ControllerDataManager:
 
 if __name__ == '__main__':
 
-    with open("./config_file.yml", 'r') as ymlfile:
+    with open("./Buildings/avenal-animal-shelter/avenal-animal-shelter.yml", 'r') as ymlfile:
         cfg = yaml.load(ymlfile)
 
     if cfg["Server"]:
@@ -259,9 +285,9 @@ if __name__ == '__main__':
     # fetching data here
     z = dm.thermal_data(days_back=30)
 
-    with open("Thermal Data/ciee_thermal_data_demo", "wb") as f:
+    with open("demo_anmial_shelter", "wb") as f:
         pickle.dump(z, f)
-
+    print(z)
 
     # # plots the data here .
     # import matplotlib.pyplot as plt
