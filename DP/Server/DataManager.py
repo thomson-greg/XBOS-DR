@@ -22,14 +22,24 @@ class DataManager:
     """
 
     def __init__(self, controller_cfg, advise_cfg, client, zone,
-                 now=datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))):
+                 now=None):
+        """
+        
+        :param controller_cfg: 
+        :param advise_cfg: 
+        :param client: 
+        :param zone: 
+        :param now: in UTC time. If None (so no now is passed), take the current time. 
+        """
 
         self.controller_cfg = controller_cfg
         self.advise_cfg = advise_cfg
         self.pytz_timezone = controller_cfg["Pytz_Timezone"]
         self.zone = zone
         self.interval = controller_cfg["Interval_Length"]
-        self.now = now
+        if now is None:
+            now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
+        self.now = now.astimezone(tz=pytz.timezone(self.pytz_timezone))
         self.horizon = advise_cfg["Advise"]["MPCPredictiveHorizon"]
         self.c = client
 
