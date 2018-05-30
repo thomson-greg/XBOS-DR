@@ -39,7 +39,7 @@ class DataManager:
         self.interval = controller_cfg["Interval_Length"]
         if now is None:
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
-        self.now = now.astimezone(tz=self.pytz_timezone)
+        self.now = now.astimezone(tz=pytz.timezone(self.pytz_timezone))
         self.horizon = advise_cfg["Advise"]["MPCPredictiveHorizon"]
         self.c = client
 
