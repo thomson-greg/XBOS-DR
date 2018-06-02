@@ -235,7 +235,7 @@ if __name__ == '__main__':
     avenal-movie-theatre
     avenal-recreation-center
     '''
-    Building = "avenal-veterans-hall"
+    # Building = "avenal-veterans-hall"
 
     collector = ThermalDataCollector(client, Building, Safemode)
 
