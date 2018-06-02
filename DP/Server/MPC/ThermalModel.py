@@ -9,7 +9,7 @@ from sklearn.base import BaseEstimator, RegressorMixin
 
 # following model also works as a sklearn model.
 class ThermalModel(BaseEstimator, RegressorMixin):
-    def __init__(self, thermal_precision=0.05, learning_rate = 0.00001, scoreType=-1,):
+    def __init__(self, thermal_precision=0.05, learning_rate=0.00001, scoreType=-1, ):
         '''
         _params:
             scoreType: (int) which actions to filter by when scoring. -1 indicates no filter, 0 no action,
@@ -86,7 +86,8 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         # NOTE: Using gradient decent $$self.params = self.param - self.learning_rate * 2 * (self._func(X, *params) - y) * features(X)
         loss = self._func(X[self._filter_columns].T.as_matrix(), *self._params)[0] - y
         adjust = self.learning_rate * loss * self._features(X[self._filter_columns].T.as_matrix())
-        self._params = self._params - adjust.reshape((adjust.shape[0])) # to make it the same dimensions as self._params
+        self._params = self._params - adjust.reshape(
+            (adjust.shape[0]))  # to make it the same dimensions as self._params
 
     def predict(self, X, y=None, should_round=True):
         """Predicts the temperatures for each row in X.
@@ -104,7 +105,7 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         predictions = self._func(X[self._filter_columns].T.as_matrix(), *self._params)
         if should_round:
             # source for rounding: https://stackoverflow.com/questions/2272149/round-to-5-or-other-number-in-python
-            return self.thermalPrecision * np.round(predictions/float(self.thermalPrecision))
+            return self.thermalPrecision * np.round(predictions / float(self.thermalPrecision))
         else:
             return predictions
 
@@ -158,81 +159,84 @@ class ThermalModel(BaseEstimator, RegressorMixin):
         return rmse
 
 
-class MPCThermalModel:
-    """Class specifically designed for the MPC process. A container class for ThermalModels for each class with functions
+class MPCThermalModel(ThermalModel):
+    """Class specifically designed for the MPC process. A child class of ThermalModel with functions
         designed to simplify usage."""
 
-    def __init__(self, thermal_data, interval_length, thermal_precision=0.05):
+    def __init__(self, zone, thermal_data, interval_length, thermal_precision=0.05):
         """
-        :param thermal_data: {"zone": pd.df thermal data for zone}
-        :param interval_length: 
+        :param zone: The zone this Thermal model is meant for. 
+        :param thermal_data: pd.df thermal data for zone (as preprocessed by ControllerDataManager). Only used for fitting.
+        :param interval_length: (int) Number of minutes between
+        :param thermal_precision: (float) The increment to which to round predictions to. (e.g. 1.77 becomes 1.75
+         and 4.124 becomes 4.10)
         """
+        self.zone = zone
+        thermal_data = thermal_data.rename({"temperature_zone_" + self.zone: "t_in"}, axis="columns")
+
+        # set our parent up first
+        super(MPCThermalModel, self).__init__(thermal_precision=thermal_precision) # TODO What to do with Learning rate ?
+        super(MPCThermalModel, self).fit(thermal_data, thermal_data["t_next"])
+
         self._oldParams = {}
 
-        self.zoneThermalModels = self.fit_zones(thermal_data, thermal_precision)
         self.interval = interval_length  # new for predictions. Will be fixed right?
-        # we will keep the temperatures constant throughout the MPC as an approximation.
-        self.zoneTemperatures = {zone: df.iloc[-1]["t_in"] for zone, df in
-                                 thermal_data.items()}
 
+        self.zoneTemperatures = None
         self.weatherPredictions = None  # store weather predictions for whole class
 
         self.lastAction = None  # TODO Fix, absolute hack and not good. controller should store this.
-        self.now = None
-
 
     # TODO Fix, absolute hack and not good. controller should store this.
-    def setLastActionAndTime(self, action, now):
+    def set_last_action(self, action):
         self.lastAction = action
-        self.now = now
 
-    def setWeahterPredictions(self, weatherPredictions):
+    def set_weather_predictions(self, weatherPredictions):
         self.weatherPredictions = weatherPredictions
 
-    def setZoneTemperaturesAndFit(self, zone_temps, dt):
-        # TODO will all zones have the same dt ?
+    def _datapoint_to_dataframe(self, interval, action, t_in, t_out):
+        """A helper function that converts a datapoint to a pd.df used for predictions.
+        Assumes that we have self.zoneTemperatures and self.zone"""
+        X = {"dt": interval, "t_in": t_in, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
+             "t_out": t_out}
+        for key_zone, val in self.zoneTemperatures.items():
+            if key_zone != self.zone:
+                X["zone_temperature_" + key_zone] = val
+
+        return pd.DataFrame(X, index=[0])
+
+    def set_temperatures_and_fit(self, zone_temperatures, interval, now):
         """
-        store curr temperature for every zone. Call whenever we are starting new interval.
+        performs one update step for the thermal model and
+        stores curr temperature for every zone. Call whenever we are starting new interval.
         :param zone_temps: {zone: temperature}
-        :return: 
+        :param interval: The delta time since the last action was called. 
+        :param now: the current time in the timezone as weather_predictions.
+        :return: None
         """
+        # store old temperatures for potential fitting
+        old_zone_temperatures = self.zoneTemperatures
+        # set new zone temperatures.
+        self.zoneTemperatures = zone_temperatures
+
+        # TODO can't fit? should we allow?
         if self.lastAction is None or self.weatherPredictions is None:
-            self.zoneTemperatures = zone_temps
             return
-        # ('t_in', 'a1', 'a2', 't_out', 'dt') and all
-        # zone
-        # temperature
-        action = self.lastAction
-        t_out = self.weatherPredictions[self.now.hour]
-        for zone in self.zoneTemperatures.keys():
-            X = {"a1": int(0 < action <= 1), "a2": int(1 < action <= 2), "dt": dt, "t_out": t_out,
-                 "t_in": self.zoneTemperatures[zone]}
 
-            # Not most loop efficient but fine for now.
-            for key_zone, val in self.zoneTemperatures.items():
-                if key_zone != zone:
-                    X["zone_temperature_" + key_zone] = val
-            y = zone_temps[zone]
-            X = pd.DataFrame(X, index=[0])
-            # online learning the new data
-            self.zoneThermalModels[zone].updateFit(X, y)
-            # store the params for potential evaluations.
-            self._oldParams[zone].append(self.zoneThermalModels[zone]._params)
-            # to make sure oldParams holds no more than 50 values for each zone
-            self._oldParams[zone] = self._oldParams[zone][-50:]
+        action = self.lastAction # TODO get as argument?
 
-        self.zoneTemperatures = zone_temps
+        t_out = self.weatherPredictions[now.hour]
 
-    def fit_zones(self, data, thermal_precision):
-        """Assigns a thermal model to each zone.
-        :param data: {zone: timeseries pd.df columns (t_in, dt, a1, a2, t_out, other_zone_temperatures)"""
-        zoneModels = {}
-        for zone, val in data.items():
-            zoneModels[zone] = ThermalModel(thermal_precision=thermal_precision).fit(val, val["t_next"])
-            self._oldParams[zone] = []
-            self._oldParams[zone].append(zoneModels[zone]._params)
+        y = self.zoneTemperatures[self.zone]
+        X = self._datapoint_to_dataframe(interval, action, self.zoneTemperatures[self.zone], t_out)
+        # online learning the new data
+        super(MPCThermalModel, self).updateFit(X, y)
 
-        return zoneModels
+        # TODO DEBUG MODE?
+        # # store the params for potential evaluations.
+        # self._oldParams[zone].append(self.zoneThermalModels[zone]._params)
+        # # to make sure oldParams holds no more than 50 values for each zone
+        # self._oldParams[zone] = self._oldParams[zone][-50:]
 
     def predict(self, t_in, zone, action, time=-1, outside_temperature=None, interval=None):
         """
@@ -251,39 +255,38 @@ class MPCThermalModel:
         if outside_temperature is None:
             assert time != -1
             assert self.weatherPredictions is not None
-            outside_temperature = self.weatherPredictions[time]
+            t_out = self.weatherPredictions[time]
 
-        X = {"dt": interval, "t_in": t_in, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
-             "t_out": outside_temperature}
-        for key_zone, val in self.zoneTemperatures.items():
-            if key_zone != zone:
-                X["zone_temperature_" + key_zone] = val
-
-        return self.zoneThermalModels[zone].predict(pd.DataFrame(X, index=[0]))
+        X = self._datapoint_to_dataframe(interval, action, t_in, t_out) # TODO which t_in are we really assuming?
+        return super(MPCThermalModel, self).predict(X)
 
     def save_to_config(self):
-        """saves the whole model to a yaml file."""
+        """saves the whole model to a yaml file.
+        RECOMMENDED: PYAML should be installed for prettier config file."""
         config_dict = {}
-        for zone in self.zoneThermalModels.keys():
-            config_dict[zone] = {}
-            # store zone temperatures
-            config_dict[zone]["Zone Temperatures"] = self.zoneTemperatures
-            zone_thermal_model = self.zoneThermalModels[zone]
-            # store coefficients
-            coefficients = {parameter_name: param for parameter_name, param in
-                            zip(zone_thermal_model._params_order, zone_thermal_model._params)}
-            config_dict[zone]["coefficients"] = coefficients
-            # store evaluations and RMSE's.
-            config_dict[zone]["Evaluations"] = {}
-            config_dict[zone]["Evaluations"]["Baseline"] = zone_thermal_model.baseline_error
-            config_dict[zone]["Evaluations"]["Model"] = zone_thermal_model.model_error
-            config_dict[zone]["Evaluations"]["ActionOrder"] = zone_thermal_model.scoreTypeList
-            config_dict[zone]["Evaluations"]["Better Than Baseline"] = zone_thermal_model.betterThanBaseline
 
-        for zone, dict in config_dict.items():
-            with open("../ZoneConfigs/thermal_model_" + zone, 'wb') as ymlfile:
-                # TODO Note import pyaml here to get a pretty config file.
-                pyaml.dump(config_dict[zone], ymlfile)
+        # store zone temperatures
+        config_dict["Zone Temperatures"] = self.zoneTemperatures
+
+        # store coefficients
+        coefficients = {parameter_name: param for parameter_name, param in
+                        zip(super(MPCThermalModel, self)._params_order, super(MPCThermalModel, self)._params)}
+        config_dict["coefficients"] = coefficients
+
+        # store evaluations and RMSE's.
+        config_dict["Evaluations"] = {}
+        config_dict["Evaluations"]["Baseline"] = super(MPCThermalModel, self).baseline_error
+        config_dict["Evaluations"]["Model"] = super(MPCThermalModel, self).model_error
+        config_dict["Evaluations"]["ActionOrder"] = super(MPCThermalModel, self).scoreTypeList
+        config_dict["Evaluations"]["Better Than Baseline"] = super(MPCThermalModel, self).betterThanBaseline
+
+        with open("../ZoneConfigs/thermal_model_" + self.zone, 'wb') as ymlfile:
+            # TODO Note import pyaml here to get a pretty config file.
+            try:
+                import pyaml
+                pyaml.dump(config_dict[self.zone], ymlfile)
+            except ImportError:
+                yaml.dump(config_dict[self.zone], ymlfile)
 
 
 if __name__ == '__main__':
@@ -301,14 +304,12 @@ if __name__ == '__main__':
     #
     # with open("../Thermal Data/thermal_model_demo", "wb") as f:
     #     pickle.dump(mpcThermalModel, f)
-    with open("../Thermal Data/demo_avenal-veterans-hall") as f:
+    with open("../Thermal Data/ciee_thermal_data_demo") as f:
         therm_data = pickle.load(f)
 
-    model = MPCThermalModel(therm_data, 15)
+    model = MPCThermalModel("HVAC_Zone_Southzone", therm_data["HVAC_Zone_Southzone"], 15)
 
     # r = therm_data["HVAC_Zone_Shelter_Corridor"].iloc[-1]
     # print(r)
     # print model.predict(t_in=r["t_in"], zone="HVAC_Zone_Shelter_Corridor", action=r["action"],outside_temperature=r["t_out"], interval=r["dt"])
     # print("hi")
-
-

@@ -30,23 +30,45 @@ def in_between(now, start, end):
         return True
 
 def getDatetime(date_string):
-    """Gets datetime from string with format HH:MM. Should be changed to datetime in-built function. """
-    return datetime.time(int(date_string.split(":")[0]), int(date_string.split(":")[1]))
+    """Gets datetime from string with format HH:MM.
+    :param date_string: string of format HH:MM
+    :returns datetime.time() object with no associated timzone. """
+    return datetime.strptime(date_string, "%H:%M").time()
 
+
+# TODO set up a moving average for how long it took for action to take place.
 # the main controller
 def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
-    now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
+    """
+    
+    :param cfg: 
+    :param advise_cfg: 
+    :param tstats: 
+    :param client: 
+    :param thermal_model: 
+    :param zone: 
+    :return: boolean, dict. Success Boolean indicates whether writing action has succeeded. Dictionary {cooling_setpoint: float,
+    heating_setpoint: float, override: bool, mode: int} and None if success boolean is flase. 
+    """
+
+    # now in UTC time.
+    now = pytz.timezone("UTC").localize(datetime.datetime.utcnow())
     try:
+        zone_temperatures = {dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}
         tstat = tstats[zone]
+        tstat_temperature = zone_temperatures[zone] # to make sure we get all temperatures at the same time
+
         dataManager = DataManager(cfg, advise_cfg, client, zone, now=now)
-        tstat_temperature = tstat.temperature
         safety_constraints = dataManager.safety_constraints()
+
         # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
         # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
-        thermal_model.setZoneTemperaturesAndFit({dict_zone: dict_tstat.temperature for dict_zone, dict_tstat in tstats.items()}, dt=15)
+        # TODO Check if update to new thermal model was correct
+        thermal_model.set_temperatures_and_fit(zone_temperatures, interval=cfg["Interval"], now=now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])))
 
+        # TODO Look at the weather_fetch function and make sure correct locks are implemented and we are getting the right data.
         weather = dataManager.weather_fetch()
-        thermal_model.setWeahterPredictions(weather)
+        thermal_model.set_weather_predictions(weather)
 
         if (cfg["Pricing"]["DR"] and in_between(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])).time(),
                                                 getDatetime(cfg["Pricing"]["DR_Start"]), getDatetime(cfg["Pricing"]["DR_Finish"]))) \
@@ -54,6 +76,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
             DR = True
         else:
             DR = False
+
         adv = Advise([zone],  # array because we might use more than one zone. Multiclass approach.
                      now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])),
                      dataManager.preprocess_occ(),
@@ -76,10 +99,9 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                      safety_constraints)
 
         action = adv.advise()
-        thermal_model.setLastActionAndTime(action, now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"]))) # TODO Fix, absolute hack and not good. controller should store this.
 
 
-    except Exception as exception:
+    except Exception:
 
         print(traceback.format_exc())
         # TODO Find a better way for exceptions
@@ -105,7 +127,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Doing nothing"
 
-    # TODO Rethink how we set setpoints for heating and cooling
+    # TODO Rethink how we set setpoints for heating and cooling and for DR events.
     elif action == "1":
         heating_setpoint = tstat_temperature + 2*advise_cfg["Advise"]["Hysterisis"]
         cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
@@ -119,7 +141,6 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                 heating_setpoint = max(safety_constraints[0][0],
                                        cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
-
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Heating"
 
@@ -127,11 +148,10 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         cooling_setpoint = tstat_temperature - 2*advise_cfg["Advise"]["Hysterisis"]
         heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
 
-
         if heating_setpoint < safety_constraints[0][0]:
             heating_setpoint = safety_constraints[0][0]
 
-            #making sure we are in the comfortband
+            # making sure we are in the comfortband
             if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
                 cooling_setpoint = min(safety_constraints[0][1], heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
@@ -139,25 +159,48 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
         print "Cooling"
     else:
         print "Problem with action."
-        return False
+        return False, None
 
     print("Zone: " + zone + ", action: " + str(p))
 
     # try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
-
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
-            # TODO uncomment for actual MPC
-            tstat.write(p)
+            # TODO uncomment when running
+            # tstat.write(p)
+            thermal_model.set_last_action(action)  # TODO Document that this needs to be set after we are sure that writing has succeeded.
             break
         except:
             if i == advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
                 e = sys.exc_info()[0]
                 print e
-                return False
+                return False, None
             continue
 
-    return True
+    return True, p
+
+
+def has_setpoint_changed(tstat, setpoint_data):
+    """
+    Checks if thermostats was manually changed. 
+    :param tstat: Tstat object we want to look at. 
+    :param setpoint_data: dict which has keys {"heating_setpoint": bool, "cooling_setpoint": bool} and corresponds to
+            the setpoint written to the thermostat by MPC. 
+    :return: Bool. Whether tstat setpoints are equal to setpoints written to tstat.
+    """
+    WARNING_MSG = "WARNING. %s has been manually changed. Setting override to False and stopping program."
+    flag_changed = False
+    if tstat.cooling_setpoint != setpoint_data["cooling_setpoint"]:
+        flag_changed = True
+        print(WARNING_MSG % "cooling setpoint")
+    if tstat.heating_setpoint != setpoint_data["heating_setpoint"]:
+        flag_changed = True
+        print(WARNING_MSG % "heating setpoint")
+
+    # write override false so the local schedules can take over again.
+    if flag_changed:
+        tstat.write({"override": False})
+    return flag_changed
 
 
 class ZoneThread(threading.Thread):
@@ -170,9 +213,10 @@ class ZoneThread(threading.Thread):
 
         self.thermal_model = thermal_model
 
-    def run(self):
 
+    def run(self):
         starttime = time.time()
+        action_data = None
         while True:
             try:
                 with open(self.cfg_filename, 'r') as ymlfile:
@@ -183,22 +227,39 @@ class ZoneThread(threading.Thread):
                 print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
                 return  # TODO MAKE THIS RUN NORMAL SCHEDULE SOMEHOW WHEN NO ZONE CONFIG EXISTS
 
+            normal_schedule_succeeded = True  # initialize
+
             if advise_cfg["Advise"]["MPC"]:
+                # Run MPC. Try up to advise_cfg["Advise"]["Thermostat_Write_Tries"] to find and write action.
                 count = 0
-                while not hvac_control(cfg, advise_cfg, self.tstats, self.client, self.thermal_model, self.zone):
+                succeeded = False
+                while not succeeded:
+                    succeeded, action_data = hvac_control(cfg, advise_cfg, self.tstats, self.client, self.thermal_model,
+                                                          self.zone)
                     time.sleep(10)
-                    count += 1
                     if count == advise_cfg["Advise"]["Thermostat_Write_Tries"]:
                         print("Problem with MPC, entering normal schedule.")
                         normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
-                        normal_schedule.normal_schedule()
+                        normal_schedule_succeeded, action_data = normal_schedule.normal_schedule()
                         break
+                    count += 1
             else:
+                # go into normal schedule
                 normal_schedule = NormalSchedule(cfg, self.tstats[self.zone], advise_cfg)
-                normal_schedule.normal_schedule()
+                normal_schedule_succeeded, action_data = normal_schedule.normal_schedule()
+
+            # TODO if normal schedule fails then real problems
+            if not normal_schedule_succeeded:
+                print("WARNING, normal schedule has not succeeded.")
+
             print datetime.datetime.now()
+            # Wait for the next interval.
             time.sleep(60. * float(cfg["Interval_Length"]) - (
             (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
+
+            # end program if setpoints have been changed.
+            if action_data is not None and not has_setpoint_changed(self.tstats[self.zone], action_data):
+                return
 
 
 if __name__ == '__main__':
@@ -217,32 +278,24 @@ if __name__ == '__main__':
     else:
         client = get_client()
 
-    # TODO Uncomment when final. will get data for past 60 days.
-    controller_dataManager = ControllerDataManager(cfg, client)
+    # --- Thermal Model Init ------------
     # initialize and fit thermal model
-    thermal_data = controller_dataManager.thermal_data(days_back=20)
-    #
-    # print("Got thermal data.")
     import pickle
     try:
         with open("Thermal Data/demo_" + cfg["Building"], "r") as f:
             thermal_data = pickle.load(f)
 
     except:
+        controller_dataManager = ControllerDataManager(cfg, client)
         thermal_data = controller_dataManager.thermal_data(days_back=5)
         with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
             pickle.dump(thermal_data, f)
 
-
-
-
     # TODO INTERVAL SHOULD NOT BE IN config_file.yml, THERE SHOULD BE A DIFFERENT INTERVAL FOR EACH ZONE
-    # TODO Add thermal precision from config.
-    thermal_model = MPCThermalModel(thermal_data, interval_length=cfg["Interval_Length"], thermal_precision=cfg["Thermal_Precision"])
-    # with open("Thermal Data/thermal_model_demo", 'r') as f:
-    #     thermal_model = pickle.load(f)
+    zone_thermal_models = {zone: MPCThermalModel(zone, zone_thermal_data, interval_length=cfg["Interval_Length"], thermal_precision=cfg["Thermal_Precision"])
+                           for zone, zone_thermal_data in thermal_data.items()}
     print("Trained Thermal Model")
-    # -------------------
+    # --------------------------------------
 
 
     with open(yaml_filename, 'r') as ymlfile:
@@ -268,14 +321,13 @@ if __name__ == '__main__':
     q = thermostat_query % cfg["Building"]
     # End of FIX - delete when Brick is fixed
 
-
-
     threads = []
     tstat_query_data = hc.do_query(q)['Rows']
+    print(tstat_query_data)
     tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in tstat_query_data}
 
     for zone, tstat in tstats.items():
-        thread = ZoneThread(yaml_filename, tstats, zone, client, thermal_model)
+        thread = ZoneThread(yaml_filename, tstats, zone, client, zone_thermal_models[zone])
         thread.start()
         threads.append(thread)
 

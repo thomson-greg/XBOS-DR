@@ -33,7 +33,7 @@ class ThermalDataCollector:
                 };"""
 
         # Start of FIX for missing Brick query
-        thermostat_query = """SELECT ?zone ?uri FROM  %s WHERE {
+        self.thermostat_query = """SELECT ?zone ?uri FROM  %s WHERE {
                   ?tstat rdf:type brick:Thermostat .
                   ?tstat bf:controls ?RTU .
                   ?RTU rdf:type brick:RTU .
@@ -44,10 +44,8 @@ class ThermalDataCollector:
         # End of FIX - delete when Brick is fixed
 
         self.client = client
-        hod_client = HodClient("xbos/hod", self.client)
 
-        thermostat_query_data = hod_client.do_query(thermostat_query % building)["Rows"]
-        self.tstats = {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in thermostat_query_data}
+        self.tstats = self.getTstats()
 
         self.COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 65, "override": True,
                                              "mode": 3}
@@ -65,6 +63,11 @@ class ThermalDataCollector:
                 "state": tstat.state,
                 "temperature": tstat.temperature}
         return data
+
+    def getTstats(self):
+        hod_client = HodClient("xbos/hod", self.client)
+        thermostat_query_data = hod_client.do_query(self.thermostat_query % self.building)["Rows"]
+        return {tstat["?zone"]: Thermostat(client, tstat["?uri"]) for tstat in thermostat_query_data}
 
     def controlZone(self, tstats, action_messages, interval, dt, flag_function=lambda: True,
                    stop_time=datetime.datetime.utcnow() + datetime.timedelta(days=1)):
@@ -125,15 +128,14 @@ class ThermalDataCollector:
             dataframe_data[zone] = data
         return dataframe_data, recorded_setpoint_changes
 
-    def main(self, tstats, interval_function=lambda action: 30, dt=1):
+    def main(self, interval_function=lambda action: 30, dt=1):
         """stores the data and calls the controlZone function to control the zones.
         Stores data for each action as {"zone": zone, "action": "action", "data":data} since we are only affecting one zone
         at a time for now. 
-        :param tstats: {zone: Thermostat object}
         :param interval_function: a function which takes an action as parameter to determine the time for which the action 
                 should run in the zone.
         :param dt: the delta time between thermostat writes/reads."""
-        zone_order = tstats.keys()  # establishes order in which to perform actions.
+        zone_order = self.tstats.keys()  # establishes order in which to perform actions.
 
         action_order = {"0": self.NO_ACTION, "1": self.HEATING_ACTION,
                         "2": self.COOLING_ACTION}  # in dictionary so we can shuffle easier if wanted.
@@ -141,6 +143,9 @@ class ThermalDataCollector:
         # control one zone. All others do nothing.
         for action_zone in zone_order:
             for i in range(3):
+
+                self.tstats = self.getTstats() # making sure we have fresh tstat objects. 
+
                 print("Started action %s in zone %s at time %s" % (
                 str(i), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
                 # re setting since I want to store data all the time. Just to make sure we aren't loosing anything.
@@ -154,15 +159,14 @@ class ThermalDataCollector:
                         action_messages[zone] = action
                     else:
                         action_messages[zone] = action_order[str(0)]  # no action
-                # using the zone_tsat for flag_function. Basically, we are heating or cooling, only stop when we have reached the setpoint.
-                zone_tstat = tstats[action_zone]
+                zone_tstat = self.tstats[action_zone]
 
                 interval = interval_function(i)
                 zone_action_msg = action_messages[action_zone]
                 # calling the controlZone loop. The function will take over and write and read to and from the zone.
                 # TODO Get rid of the ugly lambda function. right now it looks for the tstat and action which we defined in this
-                # TODO envrionment and queries it everytime the lambda is called.
-                action_data, recorded_setpoint_changes = self.controlZone(tstats, action_messages, interval, dt,
+                # TODO envrionment and queries it everytime the lambda is called. Not nice code.
+                action_data, recorded_setpoint_changes = self.controlZone(self.tstats, action_messages, interval, dt,
                                                                          lambda: (not ((zone_action_msg(zone_tstat)[
                                                                                             "heating_setpoint"] + 2) < zone_tstat.temperature < (
                                                                                        zone_action_msg(zone_tstat)[
@@ -198,10 +202,10 @@ class ThermalDataCollector:
 if __name__ == '__main__':
     import sys
 
-    Server = False
+    Server = True
     Safemode = True
     try:
-        Building = "ciee"# sys.argv[1]["Building"]
+        Building = sys.argv[1]
     except:
         sys.exit("Please specify the building name as an argument")
 
@@ -224,4 +228,4 @@ if __name__ == '__main__':
     collector = ThermalDataCollector(client, Building, Safemode)
 
     interval_function = lambda action: 90 if action != 0 else 15
-    collector.main(collector.tstats, interval_function, dt=0.5)
+    collector.main(collector.tstats, interval_function, dt=5)

@@ -121,6 +121,7 @@ class DataManager:
             return occupancy
 
     def weather_fetch(self, fetch_attempts=10):
+
         from dateutil import parser
         file_name = "./weather/weather_" + self.zone + "_" + self.controller_cfg["Building"] + ".json"
 
@@ -175,7 +176,6 @@ class DataManager:
         return weather_predictions
 
     def thermostat_setpoints(self):
-
         uuids = [self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_high'],
                  self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_low'],
                  self.advise_cfg["Data_Manager"]["UUIDS"]['Thermostat_mode']]

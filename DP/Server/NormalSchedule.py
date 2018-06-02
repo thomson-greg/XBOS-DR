@@ -86,16 +86,17 @@ class NormalSchedule:
 
         for i in range(self.advise_cfg["Advise"]["Thermostat_Write_Tries"]):
             try:
-                self.tstat.write(p)
+                # TODO uncomment when running
+                # self.tstat.write(p)
                 print("For zone: %s writing Baseline: %s" % (self.zone, str(p)))
                 break
             except:
                 if i == self.advise_cfg["Advise"]["Thermostat_Write_Tries"] - 1:
                     e = sys.exc_info()[0]
                     print e
-                    return
+                    return False, p
                 continue
-
+        return True, p
 
 if __name__ == '__main__':
 
