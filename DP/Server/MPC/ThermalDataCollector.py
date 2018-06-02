@@ -145,8 +145,10 @@ class ThermalDataCollector:
         :param dt: the delta time between thermostat writes/reads."""
         zone_order = self.tstats.keys()  # establishes order in which to perform actions.
 
-        action_order = {"0": self.NO_ACTION, "1": self.HEATING_ACTION,
+        actions = {"0": self.NO_ACTION, "1": self.HEATING_ACTION,
                         "2": self.COOLING_ACTION}  # in dictionary so we can shuffle easier if wanted.
+
+        action_order = ["0", "2", "1"]
 
         # control one zone. All others do nothing.
         for action_zone in zone_order:
@@ -155,10 +157,10 @@ class ThermalDataCollector:
                 self.tstats = self.getTstats() # making sure we have fresh tstat objects.
 
                 print("Started action %s in zone %s at time %s" % (
-                str(i), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
+                str(action_order[i]), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
                 # re setting since I want to store data all the time. Just to make sure we aren't loosing anything.
 
-                action = action_order[str(i)]
+                action = actions[action_order[i]]
 
                 # set action for each zone
                 action_messages = {}
@@ -166,7 +168,7 @@ class ThermalDataCollector:
                     if zone == action_zone:
                         action_messages[zone] = action
                     else:
-                        action_messages[zone] = action_order[str(0)]  # no action
+                        action_messages[zone] = actions[action_order[i]]  # no action
                 zone_tstat = self.tstats[action_zone]
 
                 interval = interval_function(i)
