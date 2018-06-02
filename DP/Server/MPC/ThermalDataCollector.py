@@ -106,12 +106,13 @@ class ThermalDataCollector:
                         recorded_setpoint_changes.append((action_msg["cooling_setpoint"], tstat.cooling_setpoint,
                                                           action_msg["heating_setpoint"], tstat.heating_setpoint,
                                                           datetime.datetime.utcnow(), zone))
+                        # TODO uncomment when wanting to check for manual changes.
                         # if clause to not account for the first time we are changing the temperature.
-                        if start_time + 60*dt < time.time():
-                            print("==============================")
-                            print("WARNING, manual setpoint changes are happening. Reverting to normal schedule.")
-                            tstat.write({"override": False})
-                            return None, recorded_setpoint_changes
+                        # if start_time + 60*dt < time.time():
+                        #     print("==============================")
+                        #     print("WARNING, manual setpoint changes are happening. Reverting to normal schedule.")
+                        #     tstat.write({"override": False})
+                        #     return None, recorded_setpoint_changes
 
                 #  using dt as we assume it will be, (i.e. runtime less than dt). We can infer later if it differs.
                 time_data = {"time": datetime.datetime.utcnow(), "dt": dt}
