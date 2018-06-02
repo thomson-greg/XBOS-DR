@@ -213,6 +213,13 @@ class ThermalDataCollector:
 
             print("done with zone", action_zone)
 
+        print("================ Override False ==================")
+        # override = False for every zone so we go back to schedule.
+        for zone, tstat in self.tstats.items():
+            print("set override false for zone: ", zone)
+            tstat.write({"override": False})
+            print("")
+
 
 if __name__ == '__main__':
     import sys
