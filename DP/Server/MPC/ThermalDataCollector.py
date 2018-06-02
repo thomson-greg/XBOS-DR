@@ -45,8 +45,6 @@ class ThermalDataCollector:
 
         self.client = client
 
-        self.tstats = self.getTstats()
-
         self.COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 65, "override": True,
                                              "mode": 3}
         self.HEATING_ACTION = lambda tstat: {"heating_setpoint": 80, "cooling_setpoint": 95, "override": True,
@@ -56,6 +54,9 @@ class ThermalDataCollector:
                                         "override": True, "mode": 3}
         self.building = building
         self.safemode = safemode
+
+        self.tstats = self.getTstats()
+
 
     def gatherZoneData(self, tstat):
         data = {"heating_setpoint": tstat.heating_setpoint,
@@ -105,8 +106,14 @@ class ThermalDataCollector:
                         recorded_setpoint_changes.append((action_msg["cooling_setpoint"], tstat.cooling_setpoint,
                                                           action_msg["heating_setpoint"], tstat.heating_setpoint,
                                                           datetime.datetime.utcnow(), zone))
+                        # if clause to not account for the first time we are changing the temperature.
+                        if start_time + 60*dt < time.time():
+                            print("==============================")
+                            print("WARNING, manual setpoint changes are happening. Reverting to normal schedule.")
+                            tstat.write({"override": False})
+                            return None, recorded_setpoint_changes
 
-                # using dt as we assume it will be, (i.e. runtime less than dt). We can infer later if it differs.
+                #  using dt as we assume it will be, (i.e. runtime less than dt). We can infer later if it differs.
                 time_data = {"time": datetime.datetime.utcnow(), "dt": dt}
                 for zone, tstat in tstats.items():
                     row = self.gatherZoneData(tstat)
@@ -144,7 +151,7 @@ class ThermalDataCollector:
         for action_zone in zone_order:
             for i in range(3):
 
-                self.tstats = self.getTstats() # making sure we have fresh tstat objects. 
+                self.tstats = self.getTstats() # making sure we have fresh tstat objects.
 
                 print("Started action %s in zone %s at time %s" % (
                 str(i), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
@@ -172,6 +179,11 @@ class ThermalDataCollector:
                                                                                        zone_action_msg(zone_tstat)[
                                                                                            "cooling_setpoint"] - 2))) or (
                                                                                  i == 0))
+                if action_data is None:
+                    print("The recorded setpoint changes: ", recorded_setpoint_changes)
+                    print("Stopping ThermalDataCollection.")
+                    return
+
 
                 # sets the action field in the data that was returned. So we know which action was executed.
                 for zone, df in action_data.items():
@@ -203,7 +215,7 @@ if __name__ == '__main__':
     import sys
 
     Server = True
-    Safemode = True
+    Safemode = False
     try:
         Building = sys.argv[1]
     except:
@@ -228,4 +240,4 @@ if __name__ == '__main__':
     collector = ThermalDataCollector(client, Building, Safemode)
 
     interval_function = lambda action: 90 if action != 0 else 15
-    collector.main(collector.tstats, interval_function, dt=5)
+    collector.main(interval_function, dt=5)
