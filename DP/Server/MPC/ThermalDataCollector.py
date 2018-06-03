@@ -45,9 +45,9 @@ class ThermalDataCollector:
 
         self.client = client
 
-        self.COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 65, "override": True,
+        self.COOLING_ACTION = lambda tstat: {"heating_setpoint": 50, "cooling_setpoint": 58, "override": True,
                                              "mode": 3}
-        self.HEATING_ACTION = lambda tstat: {"heating_setpoint": 80, "cooling_setpoint": 95, "override": True,
+        self.HEATING_ACTION = lambda tstat: {"heating_setpoint": 85, "cooling_setpoint": 95, "override": True,
                                              "mode": 3}
         self.NO_ACTION = lambda tstat: {"heating_setpoint": tstat.temperature - 5,
                                         "cooling_setpoint": tstat.temperature + 5,
@@ -106,6 +106,7 @@ class ThermalDataCollector:
                         recorded_setpoint_changes.append((action_msg["cooling_setpoint"], tstat.cooling_setpoint,
                                                           action_msg["heating_setpoint"], tstat.heating_setpoint,
                                                           datetime.datetime.utcnow(), zone))
+
                         # TODO uncomment when wanting to check for manual changes.
                         # if clause to not account for the first time we are changing the temperature.
                         # if start_time + 60*dt < time.time():
@@ -158,7 +159,6 @@ class ThermalDataCollector:
 
                 print("Started action %s in zone %s at time %s" % (
                 str(action_order[i]), action_zone, datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S')))
-                # re setting since I want to store data all the time. Just to make sure we aren't loosing anything.
 
                 action = actions[action_order[i]]
 
@@ -176,6 +176,8 @@ class ThermalDataCollector:
                 # calling the controlZone loop. The function will take over and write and read to and from the zone.
                 # TODO Get rid of the ugly lambda function. right now it looks for the tstat and action which we defined in this
                 # TODO envrionment and queries it everytime the lambda is called. Not nice code.
+                # TODO lambda function only for one zone implemented. should generalize ?
+
                 action_data, recorded_setpoint_changes = self.controlZone(self.tstats, action_messages, interval, dt,
                                                                          lambda: (not ((zone_action_msg(zone_tstat)[
                                                                                             "heating_setpoint"] + 2) < zone_tstat.temperature < (
@@ -213,11 +215,12 @@ class ThermalDataCollector:
 
             print("done with zone", action_zone)
 
+        # concluding the script and putting thermostats back to normal temperatures and set override to false
         print("================ Put reasonable Temperatures ==============")
         # override = False for every zone so we go back to schedule.
         for zone, tstat in self.tstats.items():
-            msg = {"heating_setpoint": 78,
-                                        "cooling_setpoint": 65,
+            msg = {"heating_setpoint": 65,
+                                        "cooling_setpoint": 78,
                                         "override": True, "mode": 3}
             print("Sending msg %s to zone %s" % (str(msg), zone))
             tstat.write(msg)
