@@ -168,7 +168,7 @@ class ThermalDataCollector:
                     if zone == action_zone:
                         action_messages[zone] = action
                     else:
-                        action_messages[zone] = actions[action_order[i]]  # no action
+                        action_messages[zone] = actions["0"]  # no action
                 zone_tstat = self.tstats[action_zone]
 
                 interval = interval_function(i)
@@ -212,6 +212,16 @@ class ThermalDataCollector:
                 print("Done with action: ", i)
 
             print("done with zone", action_zone)
+
+        print("================ Put reasonable Temperatures ==============")
+        # override = False for every zone so we go back to schedule.
+        for zone, tstat in self.tstats.items():
+            msg = {"heating_setpoint": 78,
+                                        "cooling_setpoint": 65,
+                                        "override": True, "mode": 3}
+            print("Sending msg %s to zone %s" % (str(msg), zone))
+            tstat.write(msg)
+            print("")
 
         print("================ Override False ==================")
         # override = False for every zone so we go back to schedule.
