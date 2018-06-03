@@ -259,5 +259,5 @@ if __name__ == '__main__':
 
     collector = ThermalDataCollector(client, Building, Safemode)
 
-    interval_function = lambda action: 90 if action != 0 else 15
+    interval_function = lambda action: 90 if action != 0 else 1
     collector.main(interval_function, dt=15)
