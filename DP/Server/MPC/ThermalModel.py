@@ -194,14 +194,16 @@ class MPCThermalModel(ThermalModel):
     def set_weather_predictions(self, weatherPredictions):
         self.weatherPredictions = weatherPredictions
 
-    def _datapoint_to_dataframe(self, interval, action, t_in, t_out):
+    def _datapoint_to_dataframe(self, interval, action, t_out, zone_temperatures):
         """A helper function that converts a datapoint to a pd.df used for predictions.
         Assumes that we have self.zoneTemperatures and self.zone"""
-        X = {"dt": interval, "t_in": t_in, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
+        X = {"dt": interval, "a1": int(0 < action <= 1), "a2": int(1 < action <= 2),
              "t_out": t_out}
-        for key_zone, val in self.zoneTemperatures.items():
+        for key_zone, val in zone_temperatures.items():
             if key_zone != self.zone:
                 X["zone_temperature_" + key_zone] = val
+            else:
+                X["t_in"] = val
 
         return pd.DataFrame(X, index=[0])
 
@@ -229,7 +231,11 @@ class MPCThermalModel(ThermalModel):
         t_out = self.weatherPredictions[now.hour]
 
         y = curr_zone_temperatures[self.zone]
-        X = self._datapoint_to_dataframe(interval, action, old_zone_temperatures, t_out)
+        X = self._datapoint_to_dataframe(interval, action, t_out, old_zone_temperatures)
+
+        # make sure we have no nan values. TODO make ure we are checking better.
+        assert not X.isnull().values.any()
+
         # online learning the new data
         super(MPCThermalModel, self).updateFit(X, y)
 
@@ -258,7 +264,8 @@ class MPCThermalModel(ThermalModel):
             assert self.weatherPredictions is not None
             t_out = self.weatherPredictions[time]
 
-        X = self._datapoint_to_dataframe(interval, action, t_in, t_out) # TODO which t_in are we really assuming?
+
+        X = self._datapoint_to_dataframe(interval, action, t_out, self.zoneTemperatures) # TODO which t_in are we really assuming?
         return super(MPCThermalModel, self).predict(X)
 
     def save_to_config(self):

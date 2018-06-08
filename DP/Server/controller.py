@@ -247,7 +247,7 @@ class ZoneThread(threading.Thread):
                 print "There is no " + self.zone + ".yml file under ZoneConfigs folder."
                 return  # TODO MAKE THIS RUN NORMAL SCHEDULE SOMEHOW WHEN NO ZONE CONFIG EXISTS
 
-            normal_schedule_succeeded = True  # initialize
+            normal_schedule_succeeded = None  # initialize
 
             if advise_cfg["Advise"]["MPC"]:
                 # Run MPC. Try up to advise_cfg["Advise"]["Thermostat_Write_Tries"] to find and write action.
@@ -256,20 +256,21 @@ class ZoneThread(threading.Thread):
                 while not succeeded:
                     succeeded, action_data = hvac_control(cfg, advise_cfg, self.tstats, self.client, self.thermal_model,
                                                           self.zone)
-                    time.sleep(10)
-                    if count == advise_cfg["Advise"]["Thermostat_Write_Tries"]:
-                        print("Problem with MPC, entering normal schedule.")
-                        normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
-                        normal_schedule_succeeded, action_data = normal_schedule.normal_schedule()
-                        break
-                    count += 1
+                    if not succeeded:
+                        time.sleep(10)
+                        if count == advise_cfg["Advise"]["Thermostat_Write_Tries"]:
+                            print("Problem with MPC, entering normal schedule.")
+                            normal_schedule = NormalSchedule(cfg, tstat, advise_cfg)
+                            normal_schedule_succeeded, action_data = normal_schedule.normal_schedule()
+                            break
+                        count += 1
             else:
                 # go into normal schedule
                 normal_schedule = NormalSchedule(cfg, self.tstats[self.zone], advise_cfg)
                 normal_schedule_succeeded, action_data = normal_schedule.normal_schedule()
 
             # TODO if normal schedule fails then real problems
-            if not normal_schedule_succeeded:
+            if not normal_schedule_succeeded and normal_schedule_succeeded is not None:
                 print("WARNING, normal schedule has not succeeded.")
 
             print datetime.datetime.now()
@@ -277,12 +278,10 @@ class ZoneThread(threading.Thread):
             time.sleep(60. * float(cfg["Interval_Length"]) - (
             (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
 
-            # TODO end program if setpoints have been changed. (If not writing to tstat we don't want this)
+            # end program if setpoints have been changed. (If not writing to tstat we don't want this)
             if action_data is not None and has_setpoint_changed(self.tstats[self.zone], action_data, self.zone):
                 print("Ending program for zone %s due to manual setpoint changes. \n" % self.zone)
                 return
-
-            print("")
 
 
 if __name__ == '__main__':
