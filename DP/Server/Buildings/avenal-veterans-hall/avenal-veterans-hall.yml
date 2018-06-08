@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : "avenal-veterans-hall"
 Entity_File: "./thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : True
+Server : False
 Coordinates: "36.002334,-120.1379788"
 
 # for thermal model
@@ -15,7 +15,7 @@ Pricing:
   #First sublist is weekday, second list is weekend
   Energy_Rates: "TOU-Summer" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
   Holiday: False
-  DR : True
+  DR : False
   DR_Start: "14:30"
   DR_Finish: "16:00"
   DR_Price: 0.858

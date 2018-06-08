@@ -74,8 +74,8 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
         if (cfg["Pricing"]["DR"] and in_between(now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])).time(),
                                                 getDatetime(cfg["Pricing"]["DR_Start"]),
-                                                getDatetime(cfg["Pricing"]["DR_Finish"]))) \
-                or now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
+                                                getDatetime(cfg["Pricing"]["DR_Finish"]))): #\
+                #or now.weekday() == 4:  # TODO REMOVE ALLWAYS HAVING DR ON FRIDAY WHEN DR SUBSCRIBE IS IMPLEMENTED
             DR = True
         else:
             DR = False

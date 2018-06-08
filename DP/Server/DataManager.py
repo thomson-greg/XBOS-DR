@@ -1,10 +1,10 @@
 import datetime
 import json
 import os
-import pytz
 from datetime import timedelta
 
 import pandas as pd
+import pytz
 import requests
 import yaml
 from xbos import get_client
@@ -14,6 +14,22 @@ from xbos.services.hod import HodClient
 
 # TODO add energy data acquisition
 # TODO FIX DAYLIGHT TIME CHANGE PROBLEMS
+
+# util function. should be in util class.
+def getDatetime(date_string):
+    """Gets datetime from string with format HH:MM.
+    :param date_string: string of format HH:MM
+    :returns datetime.time() object with no associated timzone. """
+    return datetime.datetime.strptime(date_string, "%H:%M").time()
+
+
+def in_between(now, start, end):
+    if start < end:
+        return start <= now < end
+    elif end < start:
+        return start <= now or now < end
+    else:
+        return True
 
 
 class DataManager:
@@ -96,14 +112,6 @@ class DataManager:
         else:
             occupancy_array = self.advise_cfg["Advise"]["Occupancy"]
 
-            def in_between(now, start, end):
-                if start < end:
-                    return start <= now < end
-                elif end < start:
-                    return start <= now or now < end
-                else:
-                    return True
-
             now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
             occupancy = []
 
@@ -149,7 +157,6 @@ class DataManager:
 
         if fetch_attempts == 0:
             raise Exception("ERROR, Could not get good data from weather service.")
-
 
         # got an error on parse in the next line that properties doesnt exit
         json_start = parser.parse(myweather["properties"]["periods"][0]["startTime"])
@@ -237,27 +244,29 @@ class DataManager:
 
     def building_setpoints(self):
 
-        setpoints_array = self.advise_cfg["Advise"]["Comfortband"]
-
-        def in_between(now, start, end):
-            if start < end:
-                return start <= now < end
-            elif end < start:
-                return start <= now or now < end
-            else:
-                return True
+        setpoints_array = self.advise_cfg["Advise"]["Baseline"]
+        safety_temperatures = self.advise_cfg["Advise"]["SafetySetpoints"]
 
         now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
         setpoints = []
 
         while now_time <= self.now + timedelta(hours=self.horizon):
-            i = now_time.weekday()
+            weekday = now_time.weekday()
 
-            for j in setpoints_array[i]:
-                if in_between(now_time.time(), datetime.time(int(j[0].split(":")[0]), int(j[0].split(":")[1])),
-                              datetime.time(int(j[1].split(":")[0]), int(j[1].split(":")[1]))):
+            for j in setpoints_array[weekday]:
+                if in_between(now_time.time(), getDatetime(j[0]), getDatetime(j[1])) and \
+                        (j[2] != "None" or j[3] != "None"): # TODO come up with better None value detection.
                     setpoints.append([j[2], j[3]])
                     break
+
+                # if we have none values, replace the values with safetytemperatures.
+                elif in_between(now_time.time(), getDatetime(j[0]), getDatetime(j[1])) and \
+                        (j[2] == "None" or j[3] == "None"):
+                    for safety_temperature_time in safety_temperatures[weekday]:
+                        if in_between(now_time.time(), getDatetime(safety_temperature_time[0]),
+                                      getDatetime(safety_temperature_time[1])):
+                            setpoints.append([safety_temperature_time[2], safety_temperature_time[3]])
+                            break
 
             now_time += timedelta(minutes=self.interval)
 
