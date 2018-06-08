@@ -33,7 +33,7 @@ def getDatetime(date_string):
     """Gets datetime from string with format HH:MM.
     :param date_string: string of format HH:MM
     :returns datetime.time() object with no associated timzone. """
-    return datetime.strptime(date_string, "%H:%M").time()
+    return datetime.datetime.strptime(date_string, "%H:%M").time()
 
 
 # TODO set up a moving average for how long it took for action to take place.
@@ -270,7 +270,6 @@ class ZoneThread(threading.Thread):
 
 
 if __name__ == '__main__':
-
     # read from config file
     try:
         yaml_filename = "Buildings/%s/%s.yml" % (sys.argv[1], sys.argv[1])
