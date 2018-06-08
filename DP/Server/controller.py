@@ -169,8 +169,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     # try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
-            # TODO uncomment when running
-            # tstat.write(p)
+            tstat.write(p)
             thermal_model.set_last_action(
                 action)  # TODO Document that this needs to be set after we are sure that writing has succeeded.
             break
@@ -259,9 +258,8 @@ class ZoneThread(threading.Thread):
 
             print datetime.datetime.now()
             # Wait for the next interval.
-            time.sleep(10)
-            # time.sleep(60. * float(cfg["Interval_Length"]) - (
-            # (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
+            time.sleep(60. * float(cfg["Interval_Length"]) - (
+            (time.time() - starttime) % (60. * float(cfg["Interval_Length"]))))
 
             # TODO end program if setpoints have been changed. (If not writing to tstat we don't want this)
             if action_data is not None and has_setpoint_changed(self.tstats[self.zone], action_data, self.zone):
