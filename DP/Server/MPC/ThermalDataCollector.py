@@ -17,7 +17,7 @@ from xbos.services.hod import HodClient
 
 
 # In[4]:
-
+# TODO change everything from utc to buildings timezone...
 class ThermalDataCollector:
     def __init__(self, client, building, safemode):
 
@@ -183,7 +183,7 @@ class ThermalDataCollector:
                                                                                             "heating_setpoint"] + 2) < zone_tstat.temperature < (
                                                                                        zone_action_msg(zone_tstat)[
                                                                                            "cooling_setpoint"] - 2))) or (
-                                                                                 i == 0))
+                                                                                 i == int(action_order[i])))
                 if action_data is None:
                     print("The recorded setpoint changes: ", recorded_setpoint_changes)
                     print("Stopping ThermalDataCollection.")
@@ -193,7 +193,7 @@ class ThermalDataCollector:
                 # sets the action field in the data that was returned. So we know which action was executed.
                 for zone, df in action_data.items():
                     if zone == action_zone:
-                        df["action"] = np.ones(df.shape[0]) * i
+                        df["action"] = np.ones(df.shape[0]) * int(action_order[i])
                     else:
                         df["action"] = np.ones(df.shape[0]) * 0
 
@@ -209,9 +209,9 @@ class ThermalDataCollector:
                     print("created directory named: ", "./Freezing_"+self.building)
 
                 with open("./Freezing_"+self.building+ "/"+ str(i) + ";"+  action_zone + ";" + datetime.datetime.utcnow().strftime('%Y-%m-%d_%H-%M-%S'), "wb") as f:
-                    pickle.dump({"zone": action_zone, "action": i, "data": action_data}, f)
+                    pickle.dump({"zone": action_zone, "action": action_order[i], "data": action_data}, f)
 
-                print("Done with action: ", i)
+                print("Done with action: ", action_order[i])
 
             print("done with zone", action_zone)
 

@@ -33,7 +33,7 @@ Advise:
     3:
     - ['00:00', '17:00', 54.0, 86.0]
     - ['17:00', '20:00', 62.0, 74.0]
-    - ['20:00', '00:00', 54.0, 86.0]
+    - ['20:00', '00:00', 60.0, 70.0] #  54.0, 86.0]
     4:
     - ['00:00', '14:00', 54.0, 86.0]
     - ['14:00', '18:00', 62.0, 74.0]
@@ -47,7 +47,7 @@ Advise:
   General_Lambda: 0.995
   Heating_Consumption: 0.075
   Hysterisis: 1.0
-  MPC: false
+  MPC: true
   MPCPredictiveHorizon: 4
   Max_Actions: 400
   Minimum_Comfortband_Height: 3

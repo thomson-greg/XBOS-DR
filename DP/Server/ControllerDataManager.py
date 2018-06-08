@@ -33,17 +33,19 @@ class ControllerDataManager:
 
         self.client = client
 
-        self.window_size = 1 # minutes. TODO should come from config
+        self.window_size = 1 # minutes. TODO should come from config. Has to be a multiple of 15 for weather getting.
         self.building = controller_cfg["Building"]
         self.hod_client = HodClient("xbos/hod", self.client)  # TODO hopefully i could incorporate this into the query.
 
+    # def _preprocess_outside_data(self, outside_data):
 
 
     def _get_thermal_data(self, start, end):
         """Get thermostat status and temperature and outside temperature for thermal model.
         :param start: (datetime) time to start. relative to datamanager instance timezone.
         :param end: (datetime) time to end. relative to datamanager instance timezone.
-        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. Timerseries are the same for both with same freq."""
+        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. outside temperature has freq of 15 min and
+        pd.df columns["tin", "a"] has freq of self.window_size. """
 
         # Converting start and end from datamanger timezone to UTC timezone.
         start = start.astimezone(pytz.timezone("UTC"))
@@ -58,7 +60,7 @@ class ControllerDataManager:
 			  ?RTU rdf:type brick:RTU . 
 			  ?RTU bf:feeds ?zone. 
 			  ?zone rdf:type brick:HVAC_Zone . 
-			  ?status_point bf:isPointOf ?tstat .
+			  ?tstat bf:hasPoint ?status_point .
 			  ?status_point rdf:type brick:Thermostat_Status .
 			  ?status_point bf:uuid ?uuid.
 			};"""
@@ -70,7 +72,7 @@ class ControllerDataManager:
                                  ?RTU rdf:type brick:RTU .
                                  ?RTU bf:feeds ?zone. 
                                  ?zone rdf:type brick:HVAC_Zone .
-                                 ?status_point bf:isPointOf ?tstat .
+                                 ?tstat bf:hasPoint ?status_point .
                                   ?status_point rdf:type brick:Thermostat_Status .
                                   ?status_point bf:uuid ?uuid.
                                  };"""
@@ -84,7 +86,7 @@ class ControllerDataManager:
 			  ?RTU rdf:type brick:RTU . 
 			  ?RTU bf:feeds ?zone. 
 			  ?zone rdf:type brick:HVAC_Zone . 
-			  ?thermostat_point bf:isPointOf ?tstat .
+			  ?tstat bf:hasPoint ?thermostat_point .
 			  ?thermostat_point rdf:type brick:Temperature_Sensor .
 			  ?thermostat_point bf:uuid ?uuid.
 			};"""
@@ -96,7 +98,7 @@ class ControllerDataManager:
                           ?RTU rdf:type brick:RTU .
                           ?RTU bf:feeds ?zone. 
                           ?zone rdf:type brick:HVAC_Zone .
-                          ?thermostat_point bf:isPointOf ?tstat .
+                          ?tstat bf:hasPoint ?thermostat_point  .
                           ?thermostat_point rdf:type brick:Temperature_Sensor .
                           ?thermostat_point bf:uuid ?uuid.
                           };"""
@@ -123,8 +125,11 @@ class ControllerDataManager:
                 thermostat_query_data[dict["?zone"]][tstat_attr] = dict["?uuid"]
 
         # get outside temperature data
-        outside_temperature_query_data = self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][
-            0]  # TODO for now taking the first weather station. Should be determined based on metadata.
+        # TODO UPDATE OUTSIDE TEMPERATURE STUFF
+        # TODO for now taking all weather stations and preprocessing it. Should be determined based on metadata.
+        outside_temperature_query_data = self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][0]
+
+        # Get data from MDAL
         c = mdal.MDALClient("xbos/mdal", client=self.client)
         outside_temperature_data = c.do_query({
             'Composition': [outside_temperature_query_data["?uuid"]],
@@ -132,11 +137,12 @@ class ControllerDataManager:
             'Selectors': [mdal.MEAN]
             , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
                        'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'WindowSize': str(15) + 'min',#str(self.window_size) + 'min',
+                       'WindowSize': str(15) + 'min', # TODO document that we are getting 15 min intervals because then we get less nan values.
                        'Aligned': True}})
-        outside_temperature_data = outside_temperature_data["df"]  # since only data for one uuid
+
+
+        outside_temperature_data = outside_temperature_data["df"]
         outside_temperature_data.columns = ["t_out"]
-        outside_temperature_data.resample("T").mean()
 
         # get the data for the thermostats for each zone.
         zone_thermal_data = {}
@@ -159,8 +165,8 @@ class ControllerDataManager:
         """Preprocesses the data for the thermal model.
         :param zone_data: dict{zone: pd.df columns["tin", "a"]}
         :param outside_data: pd.df columns["tout"]. 
-        Note: Timerseries are the same for zone_data and outside_dataa with same freq. 
-
+        NOTE: outside_data freq has to be a multiple of zone_data frequency and has to have a higher freq.
+    
         :returns {zone: pd.df columns: t_in', 't_next', 'dt','t_out', 'action', 'a1', 'a2', [other mean zone temperatures]}
                  where t_out and zone temperatures are the mean values over the intervals. 
                  a1 is whether heating and a2 whether cooling."""
@@ -206,12 +212,18 @@ class ControllerDataManager:
         zone_thermal_model_data = {}
 
         for zone in zone_data.keys():
+            # Putting together outside and zone data.
             actions = zone_data[zone]["a"]
             thermal_model_data = pd.concat([all_temperatures, actions, outside_data],
+
                                            axis=1)  # should be copied data according to documentation
             thermal_model_data = thermal_model_data.rename(columns={"zone_temperature_" + zone: "t_in"})
-
             thermal_model_data['a'] = thermal_model_data.apply(f3, axis=1)
+
+            # Assumption:
+            # Outside temperature will have nan values because it does not have same frequency as zone data.
+            # Hence, we fill with last known value to assume a constant temperature throughout intervals.
+            thermal_model_data["t_out"] = thermal_model_data["t_out"].fillna(method="pad")
 
             # prepares final data type.
             thermal_model_data['change_of_action'] = (thermal_model_data['a'].diff(1) != 0).astype(
@@ -272,22 +284,45 @@ class ControllerDataManager:
 
 if __name__ == '__main__':
 
-    with open("./Buildings/avenal-animal-shelter/avenal-animal-shelter.yml", 'r') as ymlfile:
-        cfg = yaml.load(ymlfile)
+    # with open("./Buildings/avenal-animal-shelter/avenal-animal-shelter.yml", 'r') as ymlfile:
+    #     cfg = yaml.load(ymlfile)
+    #
+    # if cfg["Server"]:
+    #     c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
+    # else:
+    #     c = get_client()
+    #
+    # dm = ControllerDataManager(controller_cfg=cfg, client=c)
+    # import pickle
+    # # fetching data here
+    # z = dm.thermal_data(days_back=30)
+    #
+    # with open("demo_anmial_shelter", "wb") as f:
+    #     pickle.dump(z, f)
+    # print(z)
+    import pickle
+
+    with open("Freezing_avenal-recreation-center/2;HVAC_Zone_Large_Room;2018-06-03_07-58-08", "r") as f:
+        thermal_data = pickle.load(f)["data"]["HVAC_Zone_Large_Room"]
+
+    with open("Buildings/avenal-recreation-center/avenal-recreation-center.yml") as f:
+        cfg = yaml.load(f)
 
     if cfg["Server"]:
         c = get_client(agent=cfg["Agent_IP"], entity=cfg["Entity_File"])
     else:
         c = get_client()
 
-    dm = ControllerDataManager(controller_cfg=cfg, client=c)
-    import pickle
-    # fetching data here
-    z = dm.thermal_data(days_back=30)
+    dataManager = ControllerDataManager(cfg, c)
 
-    with open("demo_anmial_shelter", "wb") as f:
-        pickle.dump(z, f)
-    print(z)
+    utc_zone = pytz.timezone("UTC")
+    start = utc_zone.localize(thermal_data.index[0])
+    end = utc_zone.localize(thermal_data.index[-1])
+    dm_thermal_data, o = dataManager._get_thermal_data(start=start, end=end)
+
+    print(o)
+
+    print(dm_thermal_data)
 
     # # plots the data here .
     # import matplotlib.pyplot as plt
