@@ -205,7 +205,7 @@ class MPCThermalModel(ThermalModel):
 
         return pd.DataFrame(X, index=[0])
 
-    def set_temperatures_and_fit(self, zone_temperatures, interval, now):
+    def set_temperatures_and_fit(self, curr_zone_temperatures, interval, now):
         """
         performs one update step for the thermal model and
         stores curr temperature for every zone. Call whenever we are starting new interval.
@@ -216,8 +216,9 @@ class MPCThermalModel(ThermalModel):
         """
         # store old temperatures for potential fitting
         old_zone_temperatures = self.zoneTemperatures
+
         # set new zone temperatures.
-        self.zoneTemperatures = zone_temperatures
+        self.zoneTemperatures = curr_zone_temperatures
 
         # TODO can't fit? should we allow?
         if self.lastAction is None or self.weatherPredictions is None:
@@ -227,8 +228,8 @@ class MPCThermalModel(ThermalModel):
 
         t_out = self.weatherPredictions[now.hour]
 
-        y = self.zoneTemperatures[self.zone]
-        X = self._datapoint_to_dataframe(interval, action, self.zoneTemperatures[self.zone], t_out)
+        y = curr_zone_temperatures[self.zone]
+        X = self._datapoint_to_dataframe(interval, action, old_zone_temperatures, t_out)
         # online learning the new data
         super(MPCThermalModel, self).updateFit(X, y)
 

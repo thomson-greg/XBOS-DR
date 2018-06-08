@@ -1,12 +1,9 @@
 import datetime
-import json
-import os
-import pytz
 from datetime import timedelta
 
-import pandas as pd
 import numpy as np
-import requests
+import pandas as pd
+import pytz
 import yaml
 from xbos import get_client
 from xbos.services import mdal
@@ -33,19 +30,61 @@ class ControllerDataManager:
 
         self.client = client
 
-        self.window_size = 1 # minutes. TODO should come from config. Has to be a multiple of 15 for weather getting.
+        self.window_size = 1  # minutes. TODO should come from config. Has to be a multiple of 15 for weather getting.
         self.building = controller_cfg["Building"]
         self.hod_client = HodClient("xbos/hod", self.client)  # TODO hopefully i could incorporate this into the query.
 
-    # def _preprocess_outside_data(self, outside_data):
+    def _get_outside_data(self, start=None, end=None):
+        # TODO update docstring
+        """Get outside temperature for thermal model.
+        :param start: (datetime) time to start. relative to datamanager instance timezone.
+        :param end: (datetime) time to end. relative to datamanager instance timezone.
+        :return outside temperature has freq of 15 min and
+        pd.df columns["tin", "a"] has freq of self.window_size. """
+
+        if end is None:
+            end = self.now
+        if start is None:
+            start = end - timedelta(hours=10)
 
 
-    def _get_thermal_data(self, start, end):
+        # Converting start and end from datamanger timezone to UTC timezone.
+        start = start.astimezone(pytz.timezone("UTC"))
+        end = end.astimezone(pytz.timezone("UTC"))
+
+        outside_temperature_query = """SELECT ?weather_station ?uuid FROM %s WHERE {
+                                    ?weather_station rdf:type brick:Weather_Temperature_Sensor.
+                                    ?weather_station bf:uuid ?uuid.
+                                    };"""
+
+        # get outside temperature data
+        # TODO UPDATE OUTSIDE TEMPERATURE STUFF
+        # TODO for now taking all weather stations and preprocessing it. Should be determined based on metadata.
+        outside_temperature_query_data = self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][0]
+
+        # Get data from MDAL
+        mdal_client = mdal.MDALClient("xbos/mdal", client=self.client)
+        outside_temperature_data = mdal_client.do_query({
+            'Composition': [outside_temperature_query_data["?uuid"]],
+            # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
+            'Selectors': [mdal.MEAN]
+            , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
+                       'WindowSize': str(15) + 'min',
+                       # TODO document that we are getting 15 min intervals because then we get less nan values.
+                       'Aligned': True}})
+
+        outside_temperature_data = outside_temperature_data["df"]
+        outside_temperature_data.columns = ["t_out"]
+
+        return outside_temperature_data
+
+    def _get_inside_data(self, start, end):
         """Get thermostat status and temperature and outside temperature for thermal model.
         :param start: (datetime) time to start. relative to datamanager instance timezone.
         :param end: (datetime) time to end. relative to datamanager instance timezone.
-        :return dict{zone: pd.df columns["tin", "a"]}, pd.df columns["tout"]. outside temperature has freq of 15 min and
-        pd.df columns["tin", "a"] has freq of self.window_size. """
+        :return outside temperature has freq of 15 min and
+                    pd.df columns["tin", "a"] has freq of self.window_size. """
 
         # Converting start and end from datamanger timezone to UTC timezone.
         start = start.astimezone(pytz.timezone("UTC"))
@@ -104,11 +143,6 @@ class ControllerDataManager:
                           };"""
         # End of FIX - delete when Brick is fixed
 
-        outside_temperature_query = """SELECT ?weather_station ?uuid FROM %s WHERE {
-				?weather_station rdf:type brick:Weather_Temperature_Sensor.
-				?weather_station bf:uuid ?uuid.
-			};"""
-
         temp_thermostat_query_data = {
             "tstat_temperature": self.hod_client.do_query(thermostat_temperature_query % self.building)["Rows"],
             "tstat_action": self.hod_client.do_query(thermostat_status_query % self.building)["Rows"],
@@ -116,7 +150,6 @@ class ControllerDataManager:
 
         # give the thermostat query data better structure for later loop. Can index by zone and then get uuids for each
         # thermostat attribute.
-
         thermostat_query_data = {}
         for tstat_attr, attr_dicts in temp_thermostat_query_data.items():
             for dict in attr_dicts:
@@ -124,31 +157,12 @@ class ControllerDataManager:
                     thermostat_query_data[dict["?zone"]] = {}
                 thermostat_query_data[dict["?zone"]][tstat_attr] = dict["?uuid"]
 
-        # get outside temperature data
-        # TODO UPDATE OUTSIDE TEMPERATURE STUFF
-        # TODO for now taking all weather stations and preprocessing it. Should be determined based on metadata.
-        outside_temperature_query_data = self.hod_client.do_query(outside_temperature_query % self.building)["Rows"][0]
-
-        # Get data from MDAL
-        c = mdal.MDALClient("xbos/mdal", client=self.client)
-        outside_temperature_data = c.do_query({
-            'Composition': [outside_temperature_query_data["?uuid"]],
-            # uuid from Mr.Plotter. should use outside_temperature_query_data["?uuid"],
-            'Selectors': [mdal.MEAN]
-            , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
-                       'WindowSize': str(15) + 'min', # TODO document that we are getting 15 min intervals because then we get less nan values.
-                       'Aligned': True}})
-
-
-        outside_temperature_data = outside_temperature_data["df"]
-        outside_temperature_data.columns = ["t_out"]
-
         # get the data for the thermostats for each zone.
+        mdal_client = mdal.MDALClient("xbos/mdal", client=self.client)
         zone_thermal_data = {}
         for zone, dict in thermostat_query_data.items():
             # get the thermostat data
-            dfs = c.do_query({'Composition': [dict["tstat_temperature"], dict["tstat_action"]],
+            dfs = mdal_client.do_query({'Composition': [dict["tstat_temperature"], dict["tstat_action"]],
                               'Selectors': [mdal.MEAN, mdal.MAX]
                                  , 'Time': {'T0': start.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
                                             'T1': end.strftime('%Y-%m-%d %H:%M:%S') + ' UTC',
@@ -159,7 +173,7 @@ class ControllerDataManager:
             zone_thermal_data[zone] = df.rename(columns={dict["tstat_temperature"]: 't_in', dict["tstat_action"]: 'a'})
 
         # TODO Note: The timezone for the data relies to be converted by MDAL to the local timezone.
-        return zone_thermal_data, outside_temperature_data
+        return zone_thermal_data
 
     def _preprocess_thermal_data(self, zone_data, outside_data):
         """Preprocesses the data for the thermal model.
@@ -277,9 +291,8 @@ class ControllerDataManager:
             end = self.now
         if start is None:
             start = end - timedelta(days=days_back)
-        z, o = self._get_thermal_data(start, end)
+        z, o = self._get_inside_data(start, end), self._get_outside_data(start, end)
         return self._preprocess_thermal_data(z, o)
-
 
 
 if __name__ == '__main__':
@@ -302,8 +315,6 @@ if __name__ == '__main__':
     # print(z)
     import pickle
 
-    with open("Freezing_avenal-recreation-center/2;HVAC_Zone_Large_Room;2018-06-03_07-58-08", "r") as f:
-        thermal_data = pickle.load(f)["data"]["HVAC_Zone_Large_Room"]
 
     with open("Buildings/avenal-recreation-center/avenal-recreation-center.yml") as f:
         cfg = yaml.load(f)
@@ -316,13 +327,9 @@ if __name__ == '__main__':
     dataManager = ControllerDataManager(cfg, c)
 
     utc_zone = pytz.timezone("UTC")
-    start = utc_zone.localize(thermal_data.index[0])
-    end = utc_zone.localize(thermal_data.index[-1])
-    dm_thermal_data, o = dataManager._get_thermal_data(start=start, end=end)
+    o = dataManager._get_outside_data()
 
     print(o)
-
-    print(dm_thermal_data)
 
     # # plots the data here .
     # import matplotlib.pyplot as plt
@@ -332,4 +339,3 @@ if __name__ == '__main__':
     # zone_file = open("test_" + dm.building, 'wb')
     # pickle.dump(z, zone_file)
     # zone_file.close()
-

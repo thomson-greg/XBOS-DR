@@ -63,7 +63,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
 
         # need to set weather predictions for every loop and set current zone temperatures and fit the model given the new data (if possible).
         # NOTE: call setZoneTemperaturesAndFit before setWeahterPredictions
-        # TODO Check if update to new thermal model was correct
+        # TODO Double Check if update to new thermal model was correct
         thermal_model.set_temperatures_and_fit(zone_temperatures, interval=cfg["Interval_Length"],
                                                now=now.astimezone(tz=pytz.timezone(cfg["Pytz_Timezone"])))
 
@@ -297,7 +297,7 @@ if __name__ == '__main__':
 
     except:
         controller_dataManager = ControllerDataManager(cfg, client)
-        thermal_data = controller_dataManager.thermal_data(days_back=5)
+        thermal_data = controller_dataManager.thermal_data(days_back=20)
         with open("Thermal Data/demo_" + cfg["Building"], "wb") as f:
             pickle.dump(thermal_data, f)
 
