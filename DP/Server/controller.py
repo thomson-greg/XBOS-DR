@@ -3,6 +3,7 @@ import sys
 import threading
 import time
 import traceback
+import math
 
 import pytz
 import yaml
@@ -113,6 +114,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     if action == "0":
         heating_setpoint = tstat_temperature - advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
         cooling_setpoint = tstat_temperature + advise_cfg["Advise"]["Minimum_Comfortband_Height"] / 2.
+
         if heating_setpoint < safety_constraints[0][0]:
             heating_setpoint = safety_constraints[0][0]
 
@@ -127,10 +129,15 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                 heating_setpoint = max(safety_constraints[0][0],
                                        cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
+        # round to integers since the thermostats round internally.
+        heating_setpoint = math.floor(heating_setpoint)
+        cooling_setpoint = math.ceil(cooling_setpoint)
+
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Doing nothing"
 
     # TODO Rethink how we set setpoints for heating and cooling and for DR events.
+    # heating
     elif action == "1":
         heating_setpoint = tstat_temperature + 2 * advise_cfg["Advise"]["Hysterisis"]
         cooling_setpoint = heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"]
@@ -143,9 +150,14 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
                 heating_setpoint = max(safety_constraints[0][0],
                                        cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"])
 
+        # round to integers since the thermostats round internally.
+        heating_setpoint = math.ceil(heating_setpoint)
+        cooling_setpoint = math.ceil(cooling_setpoint)
+
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Heating"
 
+    # cooling
     elif action == "2":
         cooling_setpoint = tstat_temperature - 2 * advise_cfg["Advise"]["Hysterisis"]
         heating_setpoint = cooling_setpoint - advise_cfg["Advise"]["Minimum_Comfortband_Height"]
@@ -157,6 +169,10 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
             if (cooling_setpoint - heating_setpoint) < advise_cfg["Advise"]["Minimum_Comfortband_Height"]:
                 cooling_setpoint = min(safety_constraints[0][1],
                                        heating_setpoint + advise_cfg["Advise"]["Minimum_Comfortband_Height"])
+
+        # round to integers since the thermostats round internally.
+        heating_setpoint = math.floor(heating_setpoint)
+        cooling_setpoint = math.floor(cooling_setpoint)
 
         p = {"override": True, "heating_setpoint": heating_setpoint, "cooling_setpoint": cooling_setpoint, "mode": 3}
         print "Cooling"
