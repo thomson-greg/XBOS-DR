@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : "avenal-veterans-hall"
 Entity_File: "./thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "36.002334,-120.1379788"
 
 # for thermal model
