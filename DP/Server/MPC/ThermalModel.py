@@ -264,8 +264,12 @@ class MPCThermalModel(ThermalModel):
             assert self.weatherPredictions is not None
             t_out = self.weatherPredictions[time]
 
+        # TODO NEED TO FIX THIS
+        zone_temps = self.zoneTemperatures
+        zone_temps[self.zone] = t_in
 
-        X = self._datapoint_to_dataframe(interval, action, t_out, self.zoneTemperatures) # TODO which t_in are we really assuming?
+
+        X = self._datapoint_to_dataframe(interval, action, t_out, zone_temps) # TODO which t_in are we really assuming?
         return super(MPCThermalModel, self).predict(X)
 
     def save_to_config(self):

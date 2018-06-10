@@ -185,6 +185,7 @@ def hvac_control(cfg, advise_cfg, tstats, client, thermal_model, zone):
     # try to commit the changes to the thermostat, if it doesnt work 10 times in a row ignore and try again later
     for i in range(advise_cfg["Advise"]["Thermostat_Write_Tries"]):
         try:
+            # TODO Uncomment
             tstat.write(p)
             thermal_model.set_last_action(
                 action)  # TODO Document that this needs to be set after we are sure that writing has succeeded.
