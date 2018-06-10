@@ -1,6 +1,6 @@
 Zone: HVAC_Zone_Centralzone
 Advise:
-  Print_Graph: False
+  Print_Graph: True
   General_Lambda: 0.995 #0-1
   DR_Lambda: 0.995 #0-1
   MPCPredictiveHorizon: 4 # hours
@@ -21,14 +21,14 @@ Advise:
               4:[["00:00", "07:00", 60., 85.], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", 60., 85.]],
               5:[["00:00", "00:00", 60, 85]],
               6:[["00:00", "00:00", 60, 85]]} # 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun. Must populate all the hours
-  Occupancy_Sensors: True
+  Occupancy_Sensors: False
   Occupancy: {0:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        1:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        2:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        3:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        4:[["00:00", "07:00", 0], ["07:00", "18:00", 1], ["18:00", "00:00", 0]],
                        5:[["00:00", "00:00", 0]],
-                       6:[["00:00", "00:00", 0]]} # 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun. Must populate all the hours
+                       6:[["00:00", "00:00", 1]]} # 0=Mon,1=Tue,2=Wed,3=Thu,4=Fri,5=Sat,6=Sun. Must populate all the hours
   MPC: True
   Baseline_Dr_Extend_Percent: 20.
   Baseline: {0:[["00:00", "07:00", None, None], ["07:00", "18:00", 74., 78.], ["18:00", "00:00", None, None]],

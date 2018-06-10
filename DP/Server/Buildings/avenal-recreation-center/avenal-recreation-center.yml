@@ -9,7 +9,8 @@ Coordinates: "36.0330611,-120.1811075"
 Max_Actions: 400 #int
 Thermal_Precision: 0.05 #float
 Interval_Length: 15 # min
-
+Write_Thermostats: False
+Verbose: True
 
 Pricing:
   Energy_Rates: "TOU-Summer" # options are "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
