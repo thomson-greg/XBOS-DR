@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : orinda-community-center
 Entity_File: "thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "37.8830553,-122.1900413"
 Max_Actions: 400 #int
 Thermal_Precision: 0.05 #float
