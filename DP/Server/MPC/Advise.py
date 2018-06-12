@@ -62,7 +62,7 @@ class EVA:
         self.noZones = noZones
         self.current_time = current_time
         self.l = l
-        self.g = nx.DiGraph()
+        self.g = nx.MultiDiGraph() #[TODO:Changed to MultiDiGraph... FIX print]
         self.interval = interval
         self.root = root
         self.target = self.get_real_time(pred_window * interval)
@@ -75,7 +75,7 @@ class EVA:
         self.safety = safety
         self.energy = energy
 
-        self.g.add_node(root, usage_cost=np.inf, best_action=None)
+        self.g.add_node(root, usage_cost=np.inf, best_action=None, best_successor=None)
 
     def get_real_time(self, node_time):
         """
@@ -102,7 +102,7 @@ class EVA:
 
         # add the final nodes when algorithm goes past the target prediction time
         if self.get_real_time(from_node.time) >= self.target:
-            self.g.add_node(from_node, usage_cost=0, best_action=None)
+            self.g.add_node(from_node, usage_cost=0, best_action=None, best_successor=None)
             return
 
         # create the action set (0 is for do nothing, 1 is for cooling, 2 is for heating)
@@ -145,7 +145,7 @@ class EVA:
             # create node if the new node is not already in graph
             # recursively run shortest path for the new node
             if new_node not in self.g:
-                self.g.add_node(new_node, usage_cost=np.inf, best_action=None)
+                self.g.add_node(new_node, usage_cost=np.inf, best_action=None, best_successor=None)
                 self.shortest_path(new_node)
 
             # need to find a way to get the consumption and discomfort values between [0,1]
@@ -158,10 +158,11 @@ class EVA:
 
             # choose the shortest path
             if this_path_cost <= self.g.node[from_node]['usage_cost']:
-                if this_path_cost == self.g.node[from_node]['usage_cost'] and self.g.node[from_node][
-                    'best_action'] == '0':
+                '''
+				if this_path_cost == self.g.node[from_node]['usage_cost'] and self.g.node[from_node]['best_action'] == '0': [TODO: Is there any value in prunning here?]
                     continue
-                self.g.add_node(from_node, best_action=new_node, usage_cost=this_path_cost)
+				'''
+                self.g.add_node(from_node, best_action=action, best_successor=new_node, usage_cost=this_path_cost)
 
     def reconstruct_path(self, graph=None):
         """
@@ -180,8 +181,8 @@ class EVA:
         cur = self.root
         path = [cur]
 
-        while graph.node[cur]['best_action'] is not None:
-            cur = graph.node[cur]['best_action']
+        while graph.node[cur]['best_successor'] is not None:
+            cur = graph.node[cur]['best_successor']
             path.append(cur)
 
         return path
@@ -236,12 +237,13 @@ class Advise:
         """
         self.advise_unit.shortest_path(self.root)
         path = self.advise_unit.reconstruct_path()
-        action = self.advise_unit.g[path[0]][path[1]]['action']
+        action = self.advise_unit.g.node[self.root]["best_action"] #self.advise_unit.g[path[0]][path[1]]['action'] [TODO Is this Fix correct?]
 
         if self.plot:
             fig = plotly_figure(self.advise_unit.g, path=path)
             py.plot(fig)
 
+        print("Fixed action:"+str(action))
         return action
 
 
