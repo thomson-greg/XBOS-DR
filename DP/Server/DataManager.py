@@ -55,7 +55,7 @@ class DataManager:
         self.interval = controller_cfg["Interval_Length"]
         if now is None:
             now = datetime.datetime.utcnow().replace(tzinfo=pytz.timezone("UTC"))
-        self.now = now.astimezone(tz=pytz.timezone(self.pytz_timezone))
+        self.now = now
         self.horizon = advise_cfg["Advise"]["MPCPredictiveHorizon"]
         self.c = client
 
@@ -244,7 +244,7 @@ class DataManager:
 
     def building_setpoints(self):
 
-        setpoints_array = self.advise_cfg["Advise"]["Baseline"]
+        setpoints_array = self.advise_cfg["Advise"]["Comfortband"]
         safety_temperatures = self.advise_cfg["Advise"]["SafetySetpoints"]
 
         now_time = self.now.astimezone(tz=pytz.timezone(self.controller_cfg["Pytz_Timezone"]))
