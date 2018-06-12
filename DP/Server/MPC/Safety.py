@@ -33,7 +33,7 @@ class Safety:
                    range(3 ** self.noZones)]  # change the 3 in toBase() for more actions
         for i in nonSafe:
             if i >= 0:
-                actions = list(filter(lambda x: x[i - 1] == '1', actions))
+                actions = list(filter(lambda x: x[i - 1] == '2', actions))
             else:
                 actions2 = []
                 for action in actions:
@@ -42,7 +42,7 @@ class Safety:
                         if j != -i - 1:
                             str_temp += action[j]
                         else:
-                            str_temp += '2'
+                            str_temp += '1'
                     actions2.append(str_temp)
                 actions = actions2
                 actions = list(set(actions))
