@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : south-berkeley-senior-center
 Entity_File: "thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "37.85436,-122.2751013"
 # for thermal model
 Max_Actions: 400 #int
