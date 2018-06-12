@@ -2,7 +2,7 @@ Pytz_Timezone: "America/Los_Angeles"
 Building : "ciee"
 Entity_File: "thanos.ent"
 Agent_IP: '172.17.0.1:28589'
-Server : False
+Server : True
 Coordinates: "37.8751,-122.2761"
 
 # TODO Daniel added this
