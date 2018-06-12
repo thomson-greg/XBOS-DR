@@ -15,7 +15,7 @@ Pricing:
   #First sublist is weekday, second list is weekend
   Energy_Rates: "TOU-Summer" # options are "Server", "NON-TOU-Summer", "NON-TOU-Winter", "TOU-Summer", "TOU-Winter"
   Holiday: False
-  DR : False
+  DR : True
   DR_Start: "14:00"
   DR_Finish: "18:00"
   DR_Price: 0.858
