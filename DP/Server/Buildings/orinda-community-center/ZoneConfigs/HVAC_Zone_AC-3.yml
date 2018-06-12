@@ -18,7 +18,8 @@ Advise:  #NaN ok?
  Thermal_Precision: 0.05 #Float
  Occupancy_Obs_Len_Addition: 4 #Hours
  Baseline_Dr_Extend_Percent: 5 #Percentage
- Occupancy_Sensors:  False 
+ Occupancy_Sensors:  False
+ Thermostat_Write_Tries: 10
  Comfortband:  { 
    
   0:[["00:00", "06:00",  None,  None], ["06:00", "08:00", 66, 73], ["08:00", "16:00", None, None], ["16:00", "19:00", 68, 73], ["19:00", "00:00", None, None]], 
