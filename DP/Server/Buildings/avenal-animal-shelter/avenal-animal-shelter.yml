@@ -17,7 +17,7 @@ Pricing:
   Holiday: False
   DR : True
   DR_Start: "14:00"
-  DR_Finish: "16:00"
+  DR_Finish: "18:00"
   DR_Price: 0.858
   NON-TOU-Summer: [[["00:00", "00:00", 0.25]], [["00:00", "00:00", 0.25]]]
   NON-TOU-Winter: [[["00:00", "00:00", 0.19]], [["00:00", "00:00", 0.19]]]
